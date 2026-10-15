@@ -203,7 +203,7 @@
     }
     .price-badge {
       position: absolute;
-      top: 8px;
+      top: 38px; /* Moved down so the top of the card is visible */
       right: 8px;
       background: rgba(11, 17, 32, 0.92);
       color: var(--green-bright);
@@ -212,10 +212,11 @@
       font-weight: 700;
       font-size: 0.8rem;
       border: 1px solid var(--border);
+      z-index: 2;
     }
     .rarity-badge {
       position: absolute;
-      top: 8px;
+      top: 38px; /* Moved down so the top of the card is visible */
       left: 8px;
       background: rgba(11, 17, 32, 0.92);
       color: var(--accent);
@@ -224,6 +225,7 @@
       font-weight: 700;
       font-size: 0.75rem;
       border: 1px solid var(--border);
+      z-index: 2;
     }
     .card-body {
       padding: 10px 12px;
