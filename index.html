@@ -6,7 +6,6 @@
   <title>L3-Vault | One Piece TCG Collection & Deck Manager</title>
   <style>
     :root {
-      /* Restored Classic Ocean & Navy Blue Theme */
       --bg: #0b1120;
       --panel: #111827;
       --panel-alt: #1e293b;
@@ -127,7 +126,7 @@
     /* Stats Bar */
     .stats-bar {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(185px, 1fr));
       gap: 12px;
       padding: 16px 24px;
       background: #080d1a;
@@ -139,9 +138,14 @@
       padding: 12px 16px;
       border-radius: 8px;
     }
-    .stat-label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; }
+    .stat-card.highlight-loc {
+      border-color: var(--accent);
+      background: linear-gradient(180deg, rgba(37, 99, 235, 0.14) 0%, rgba(17, 24, 39, 1) 100%);
+    }
+    .stat-label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; font-weight: 600; }
     .stat-value { font-size: 1.35rem; font-weight: 800; margin-top: 4px; color: #fff; }
     .stat-value.price { color: var(--green-bright); }
+    .stat-sub { font-size: 0.74rem; color: var(--muted); margin-top: 2px; }
 
     /* Filter Bar */
     .filter-bar {
@@ -379,7 +383,7 @@
     /* Deck Builder Layout */
     .deck-workspace {
       display: grid;
-      grid-template-columns: 1.15fr 1fr;
+      grid-template-columns: 1.2fr 1fr;
       gap: 20px;
       align-items: start;
     }
@@ -392,13 +396,37 @@
       border-radius: 10px;
       padding: 16px;
     }
+    .loc-checkbox-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 8px 10px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 10px;
+    }
+    .loc-check-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.78rem;
+      background: var(--panel-alt);
+      color: var(--text);
+      padding: 4px 9px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      user-select: none;
+    }
+    .loc-check-pill:hover { border-color: var(--accent); }
     .picker-list {
       max-height: 600px;
       overflow-y: auto;
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(145px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
       gap: 10px;
-      margin-top: 12px;
+      margin-top: 10px;
     }
     .picker-card {
       background: var(--bg);
@@ -409,6 +437,10 @@
       flex-direction: column;
       gap: 5px;
       font-size: 0.8rem;
+    }
+    .picker-card.owned-in-vault {
+      border-color: var(--accent);
+      box-shadow: 0 0 8px rgba(56, 189, 248, 0.16);
     }
     .picker-card img {
       width: 100%;
@@ -460,7 +492,7 @@
     </div>
   </header>
 
-  <!-- Summary Stats Bar -->
+  <!-- Summary Stats Bar (With Dynamic Location Market Value Box Next to Collection Value) -->
   <div class="stats-bar">
     <div class="stat-card">
       <div class="stat-label">Active Vault</div>
@@ -477,6 +509,11 @@
     <div class="stat-card">
       <div class="stat-label">Collection Market Value</div>
       <div class="stat-value price" id="statTotalValue">$0.00</div>
+    </div>
+    <div class="stat-card highlight-loc">
+      <div class="stat-label" id="statLocationLabel" style="color:var(--accent);">All Locations Value</div>
+      <div class="stat-value price" id="statLocationValue">$0.00</div>
+      <div class="stat-sub" id="statLocationSub">Select a Location filter below to view its value</div>
     </div>
   </div>
 
@@ -508,7 +545,7 @@
         <option value="owned">Owned Only</option>
         <option value="missing">Missing Only</option>
       </select>
-      <select id="locationFilter" onchange="resetAndRenderCatalog()">
+      <select id="locationFilter" onchange="onLocationFilterChange()">
         <option value="">All Locations</option>
       </select>
       <select id="sortFilter" onchange="resetAndRenderCatalog()">
@@ -550,12 +587,13 @@
     </div>
 
     <div class="deck-workspace">
-      <!-- LEFT: VISUAL CARD PICKER (CHEAPEST REGULAR PRINT BY DEFAULT) -->
+      <!-- LEFT: VISUAL CARD PICKER (OWNED FIRST + LOCATION CHECKBOXES) -->
       <div class="panel-box">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
           <h3 style="color:var(--accent);">1. Pick Cards to Add to Deck</h3>
           <button class="btn" style="padding:4px 10px; font-size:0.78rem;" onclick="resetDeckPickerFilters()">↺ Reset Picker Filters</button>
         </div>
+
         <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
           <input type="text" id="deckSearchInput" placeholder="Search card name or ID (e.g., Luffy, OP13-083)..." oninput="renderDeckPicker()" style="flex:1; min-width:170px;" />
           <select id="deckPickerSet" onchange="renderDeckPicker()">
@@ -568,16 +606,35 @@
             <option value="Stage">Stages</option>
           </select>
         </div>
+
+        <!-- Primary Checkboxes -->
         <div style="display:flex; flex-wrap:wrap; gap:14px; margin-bottom:10px; font-size:0.82rem; color:var(--muted);">
-          <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+          <label style="display:flex; align-items:center; gap:6px; cursor:pointer; color:var(--accent); font-weight:600;">
             <input type="checkbox" id="matchLeaderColorChk" checked onchange="renderDeckPicker()" />
-            Match Selected Leader's Color
+            Match Selected Leader's Color(s)
           </label>
           <label style="display:flex; align-items:center; gap:6px; cursor:pointer; color:var(--green-bright); font-weight:600;">
             <input type="checkbox" id="cheapestPrintOnlyChk" checked onchange="renderDeckPicker()" />
-            Show Cheapest Regular Print Only (Hide Manga / Alt Arts)
+            Show Cheapest Regular Print Only
+          </label>
+          <label style="display:flex; align-items:center; gap:6px; cursor:pointer; color:#fff; font-weight:600;">
+            <input type="checkbox" id="prioritizeOwnedChk" checked onchange="renderDeckPicker()" />
+            Show My Owned Cards First
+          </label>
+          <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+            <input type="checkbox" id="ownedOnlyDeckChk" onchange="renderDeckPicker()" />
+            Owned Cards Only
           </label>
         </div>
+
+        <!-- Per-Location Checkboxes for Deck Building -->
+        <div style="margin-bottom:8px;">
+          <div style="font-size:0.75rem; color:var(--muted); margin-bottom:5px; text-transform:uppercase; font-weight:700;">
+            Filter by Your Vault Locations (Check to show cards from specific binders/decks):
+          </div>
+          <div id="deckLocationCheckboxes" class="loc-checkbox-bar"></div>
+        </div>
+
         <div id="deckPickerGrid" class="picker-list"></div>
       </div>
 
@@ -588,23 +645,10 @@
           <button class="btn btn-green" onclick="saveCurrentDeck()">💾 Save Deck to Vault</button>
         </div>
 
-        <!-- Load Verified Online Tournament Deck Bar -->
-        <div style="background:var(--bg); border:1px solid var(--border); padding:10px 12px; border-radius:8px; margin-bottom:12px;">
-          <label style="font-size:0.78rem; color:var(--accent); font-weight:700; display:block; margin-bottom:6px;">
-            🏆 Load Verified Online Tournament Deck (Auto-Picks Cheapest Prints):
-          </label>
-          <div style="display:flex; gap:8px; flex-wrap:wrap;">
-            <select id="tournamentDeckSelect" style="flex:1; min-width:200px;">
-              <option value="">-- Choose a Championship Tournament Deck --</option>
-            </select>
-            <button class="btn btn-primary" onclick="loadTournamentPreset()">Load Tournament Deck</button>
-          </div>
-        </div>
-
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px;">
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:12px;">
           <div>
             <label style="font-size:0.78rem; color:var(--muted); display:block; margin-bottom:4px;">Deck Name</label>
-            <input type="text" id="deckNameInput" placeholder="e.g., Red/Green Luffy Tournament" style="width:100%;" />
+            <input type="text" id="deckNameInput" placeholder="e.g., Blue/Red Ace Meta" style="width:100%;" />
           </div>
           <div>
             <label style="font-size:0.78rem; color:var(--muted); display:block; margin-bottom:4px;">Leader Card (Cheapest Regular Print)</label>
@@ -614,17 +658,33 @@
           </div>
         </div>
 
-        <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
-          <button class="btn btn-primary" onclick="suggestMetaDeck()">⚡ Auto-Build 50-Card Deck (Cheapest Prints)</button>
-          <button class="btn" onclick="togglePasteImportBox()">📋 Paste Decklist from LimitlessTCG / Egman</button>
+        <!-- Live Online Tournament Meta Search & Auto-Builder -->
+        <div style="background:var(--bg); border:1px solid var(--border); padding:10px 12px; border-radius:8px; margin-bottom:12px;">
+          <div style="font-size:0.76rem; color:var(--accent); font-weight:700; text-transform:uppercase; margin-bottom:8px;">
+            🌐 Live Tournament Meta Search & Deck Tools
+          </div>
+          <div style="display:flex; flex-wrap:wrap; gap:8px;">
+            <button class="btn btn-primary" onclick="searchLiveMetaDecks('limitless')" title="Search live tournament-winning decks for your selected Leader on LimitlessTCG">
+              🏆 Search Live Meta Decks (LimitlessTCG)
+            </button>
+            <button class="btn" onclick="searchLiveMetaDecks('topdecks')" title="Search current tournament winning decklists on OnePieceTopDecks & Egman Events">
+              🔎 Search Tournament Lists (Web)
+            </button>
+            <button class="btn" onclick="togglePasteImportBox()">
+              📋 Paste Copied Decklist
+            </button>
+            <button class="btn" onclick="suggestMetaDeck()" title="Auto-fill a 50-card curve prioritizing your owned cards and cheapest prints">
+              ⚡ Auto-Fill 50-Card Curve
+            </button>
+          </div>
         </div>
 
         <!-- Paste Decklist Box -->
-        <div id="pasteImportBox" class="hidden" style="background:var(--bg); padding:10px; border:1px solid var(--border); border-radius:8px; margin-bottom:12px;">
+        <div id="pasteImportBox" class="hidden" style="background:var(--bg); padding:10px; border:1px solid var(--accent); border-radius:8px; margin-bottom:12px;">
           <div style="font-size:0.8rem; color:var(--muted); margin-bottom:6px;">
-            Copy any tournament decklist text from <strong>LimitlessTCG</strong> or <strong>Egman Events</strong> and paste below (automatically resolves to the cheapest regular print):
+            Copy any tournament decklist text from <strong>LimitlessTCG</strong> or <strong>Egman Events</strong> and paste below (automatically resolves every card to its cheapest regular print):
           </div>
-          <textarea id="pasteDeckTextarea" rows="5" style="width:100%; margin-bottom:8px;" placeholder="1 OP13-001&#10;4 OP01-016&#10;4 OP13-016"></textarea>
+          <textarea id="pasteDeckTextarea" rows="5" style="width:100%; margin-bottom:8px;" placeholder="1 OP13-002&#10;4 OP01-016&#10;4 OP13-016"></textarea>
           <button class="btn btn-green" onclick="importPastedDecklist()">Import & Pick Cheapest Prints</button>
         </div>
 
@@ -695,7 +755,7 @@
                 Manage Your Custom Locations (Decks, Binders, Boxes)
               </div>
               <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
-                <input type="text" id="newLocationInput" placeholder="Type new location (e.g., Red Binder, Robin Deck)..." style="flex:1; min-width:180px;" />
+                <input type="text" id="newLocationInput" placeholder="Type new location (e.g., Blue Binder, Robin Deck)..." style="flex:1; min-width:180px;" />
                 <button class="btn btn-primary" onclick="addNewLocation()">+ Add Location</button>
               </div>
               <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
@@ -714,13 +774,26 @@
   </div>
 
   <script>
+    const OP_COLORS = ['Red', 'Green', 'Blue', 'Purple', 'Black', 'Yellow'];
+
+    // Reliably extract all colors from single or multi-colored cards (handles /, ;, commas, spaces)
+    function extractColors(colorStr) {
+      if (!colorStr) return [];
+      const lower = String(colorStr).toLowerCase();
+      return OP_COLORS.filter(c => lower.includes(c.toLowerCase()));
+    }
+
+    function formatColorDisplay(colorStr) {
+      const cols = extractColors(colorStr);
+      return cols.length > 0 ? cols.join('/') : (colorStr || '');
+    }
+
     let activeOwner = localStorage.getItem('l3_active_owner') || "Larry's Collection";
     let allCards = [];
     let cardMap = new Map();
-    let cheapestBaseMap = new Map(); // baseId -> cheapest regular card object
-    let ownedByBaseIdMap = new Map(); // baseId -> total copies owned across any print
+    let cheapestBaseMap = new Map();
+    let ownedByBaseIdMap = new Map(); // baseId -> { qty, locations: [], locCounts: {} }
     let ownerLocations = ['Unassigned'];
-    let tournamentDecks = [];
     let filteredCards = [];
     let displayLimit = 60;
     let activeModalCardId = null;
@@ -748,7 +821,6 @@
              /\((Parallel|Alternate Art|Manga|Box Topper|SP|TR)\)/i.test(card.name || '');
     }
 
-    // Automatic Multi-CDN Image Fallback so broken images self-heal
     function getBestCardImage(card) {
       if (card.image_url && card.image_url.startsWith('http')) return card.image_url;
       const baseId = getBaseId(card.card_id);
@@ -791,6 +863,7 @@
       document.getElementById('tabCatalogBtn').classList.toggle('active', isCatalog);
       document.getElementById('tabDecksBtn').classList.toggle('active', !isCatalog);
       if (!isCatalog) {
+        renderDeckLocationCheckboxes();
         renderDeckPicker();
         renderActiveDeckList();
       }
@@ -802,10 +875,12 @@
 
       for (const c of allCards) {
         const baseId = getBaseId(c.card_id);
-        const prevOwned = ownedByBaseIdMap.get(baseId) || { qty: 0, locations: [] };
+        const prevOwned = ownedByBaseIdMap.get(baseId) || { qty: 0, locations: [], locCounts: {} };
         prevOwned.qty += (c.owned_qty || 0);
         for (const cp of (c.copies || [])) {
-          if (cp.location) prevOwned.locations.push(cp.location);
+          const loc = cp.location || 'Unassigned';
+          prevOwned.locations.push(loc);
+          prevOwned.locCounts[loc] = (prevOwned.locCounts[loc] || 0) + 1;
         }
         ownedByBaseIdMap.set(baseId, prevOwned);
 
@@ -832,7 +907,6 @@
       const data = await res.json();
       allCards = data.cards || [];
       ownerLocations = data.locations || ['Unassigned'];
-      tournamentDecks = data.tournamentDecks || [];
 
       cardMap.clear();
       allCards.forEach(c => cardMap.set(c.card_id, c));
@@ -841,6 +915,7 @@
       document.getElementById('syncStatusText').textContent = `Last Sync: ${data.lastSync || 'Ready'}`;
 
       populateDropdownFilters();
+      renderDeckLocationCheckboxes();
       updateCollectionStats();
       resetAndRenderCatalog();
       await loadSavedDecks();
@@ -868,14 +943,14 @@
       const currentLoc = locSelect.value;
       locSelect.innerHTML = `<option value="">All Locations</option>` +
         ownerLocations.map(l => `<option value="${escapeHtml(l)}">📁 ${escapeHtml(l)}</option>`).join('');
-      locSelect.value = currentLoc;
+      locSelect.value = ownerLocations.includes(currentLoc) ? currentLoc : '';
 
       const delLocSelect = document.getElementById('deleteLocationSelect');
       const customLocs = ownerLocations.filter(l => l !== 'Unassigned');
       delLocSelect.innerHTML = `<option value="">-- Select Custom Location to Delete (${customLocs.length}) --</option>` +
         customLocs.map(l => `<option value="${escapeHtml(l)}">${escapeHtml(l)}</option>`).join('');
 
-      // Leaders dropdown in Deck Builder (Only show cheapest regular print per Leader)
+      // Leaders dropdown in Deck Builder (Cheapest regular print per Leader, showing multi-colors clearly)
       const uniqueLeaders = Array.from(cheapestBaseMap.values())
         .filter(c => c.card_type === 'Leader')
         .sort((a, b) => a.card_id.localeCompare(b.card_id));
@@ -883,16 +958,54 @@
       const leaderSelect = document.getElementById('deckLeaderSelect');
       const currentLeader = leaderSelect.value;
       leaderSelect.innerHTML = `<option value="">-- Select a Leader (${uniqueLeaders.length}) --</option>` +
-        uniqueLeaders.map(l => `<option value="${escapeHtml(l.card_id)}">${escapeHtml( getBaseId(l.card_id) )} - ${escapeHtml(l.name)} (${escapeHtml(l.color || '')}) - $${Number(l.market_price || 0).toFixed(2)}</option>`).join('');
+        uniqueLeaders.map(l => {
+          const cleanColor = formatColorDisplay(l.color);
+          return `<option value="${escapeHtml(l.card_id)}">${escapeHtml(getBaseId(l.card_id))} - ${escapeHtml(l.name)} [${escapeHtml(cleanColor)}] - $${Number(l.market_price || 0).toFixed(2)}</option>`;
+        }).join('');
       leaderSelect.value = currentLeader;
-
-      // Tournament Decks dropdown
-      const tourneySelect = document.getElementById('tournamentDeckSelect');
-      tourneySelect.innerHTML = `<option value="">-- Choose a Championship Tournament Deck --</option>` +
-        tournamentDecks.map(t => `<option value="${escapeHtml(t.id)}">${escapeHtml(t.name)}</option>`).join('');
     }
 
-    // RESET FILTERS BUTTON HANDLERS
+    // Render Per-Location Checkboxes inside the Deck Builder Card Picker
+    function renderDeckLocationCheckboxes() {
+      const container = document.getElementById('deckLocationCheckboxes');
+      if (!container) return;
+
+      // Preserve currently checked locations
+      const previouslyChecked = new Set(
+        Array.from(container.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value)
+      );
+
+      // Count how many total cards are in each location
+      const countsByLoc = {};
+      ownerLocations.forEach(l => { countsByLoc[l] = 0; });
+      for (const c of allCards) {
+        for (const cp of (c.copies || [])) {
+          const loc = cp.location || 'Unassigned';
+          countsByLoc[loc] = (countsByLoc[loc] || 0) + 1;
+        }
+      }
+
+      container.innerHTML = ownerLocations.map(loc => {
+        const count = countsByLoc[loc] || 0;
+        const isChecked = previouslyChecked.has(loc) ? 'checked' : '';
+        return `
+          <label class="loc-check-pill">
+            <input type="checkbox" class="deck-loc-chk" value="${escapeHtml(loc)}" ${isChecked} onchange="renderDeckPicker()" />
+            <span>📁 ${escapeHtml(loc)} (${count})</span>
+          </label>
+        `;
+      }).join('');
+    }
+
+    function getSelectedDeckLocations() {
+      return Array.from(document.querySelectorAll('.deck-loc-chk:checked')).map(cb => cb.value);
+    }
+
+    function onLocationFilterChange() {
+      updateLocationValueStat();
+      resetAndRenderCatalog();
+    }
+
     function resetCatalogFilters() {
       document.getElementById('searchInput').value = '';
       document.getElementById('setFilter').value = '';
@@ -901,6 +1014,7 @@
       document.getElementById('ownershipFilter').value = 'all';
       document.getElementById('locationFilter').value = '';
       document.getElementById('sortFilter').value = 'id';
+      updateLocationValueStat();
       resetAndRenderCatalog();
     }
 
@@ -910,6 +1024,9 @@
       document.getElementById('deckPickerType').value = '';
       document.getElementById('matchLeaderColorChk').checked = true;
       document.getElementById('cheapestPrintOnlyChk').checked = true;
+      document.getElementById('prioritizeOwnedChk').checked = true;
+      document.getElementById('ownedOnlyDeckChk').checked = false;
+      document.querySelectorAll('.deck-loc-chk').forEach(cb => { cb.checked = false; });
       renderDeckPicker();
     }
 
@@ -930,6 +1047,49 @@
       document.getElementById('statTotalOwned').textContent = totalOwned.toLocaleString();
       document.getElementById('statUniqueOwned').textContent = uniqueOwned.toLocaleString();
       document.getElementById('statTotalValue').textContent = `$${totalVal.toFixed(2)}`;
+      updateLocationValueStat();
+    }
+
+    // Dynamic Location Market Value Box Next to Collection Market Value
+    function updateLocationValueStat() {
+      const selectedLoc = document.getElementById('locationFilter').value;
+      const labelEl = document.getElementById('statLocationLabel');
+      const valueEl = document.getElementById('statLocationValue');
+      const subEl = document.getElementById('statLocationSub');
+
+      if (!selectedLoc) {
+        // When "All Locations" is selected, show total value across all locations & prompt user
+        let allVal = 0;
+        let allCount = 0;
+        for (const c of allCards) {
+          const qty = c.owned_qty || 0;
+          if (qty > 0) {
+            allCount += qty;
+            allVal += qty * (Number(c.market_price) || 0);
+          }
+        }
+        labelEl.textContent = 'All Locations Value';
+        valueEl.textContent = `$${allVal.toFixed(2)}`;
+        subEl.textContent = `Filter by a Location below to see its specific value`;
+      } else {
+        // Calculate exact value & copy count for the selected Location (e.g., "Blue Binder Value")
+        let locVal = 0;
+        let locCopies = 0;
+        let locUnique = 0;
+
+        for (const c of allCards) {
+          const matchingCopies = (c.copies || []).filter(cp => (cp.location || 'Unassigned') === selectedLoc).length;
+          if (matchingCopies > 0) {
+            locCopies += matchingCopies;
+            locUnique += 1;
+            locVal += matchingCopies * (Number(c.market_price) || 0);
+          }
+        }
+
+        labelEl.textContent = `${selectedLoc} Value`;
+        valueEl.textContent = `$${locVal.toFixed(2)}`;
+        subEl.textContent = `${locCopies} copies (${locUnique} unique) in ${selectedLoc}`;
+      }
     }
 
     function resetAndRenderCatalog() {
@@ -953,11 +1113,11 @@
 
       filteredCards = allCards.filter(c => {
         if (setCode && c.set_code !== setCode) return false;
-        if (color && !(c.color || '').includes(color)) return false;
+        if (color && !extractColors(c.color).includes(color)) return false;
         if (type && c.card_type !== type) return false;
         if (own === 'owned' && (!c.owned_qty || c.owned_qty <= 0)) return false;
         if (own === 'missing' && c.owned_qty > 0) return false;
-        if (loc && !(c.copies || []).some(cp => cp.location === loc)) return false;
+        if (loc && !(c.copies || []).some(cp => (cp.location || 'Unassigned') === loc)) return false;
 
         if (q) {
           const hay = `${c.card_id} ${c.name} ${c.subtypes || ''} ${c.effect || ''} ${c.set_name || ''}`.toLowerCase();
@@ -1006,6 +1166,7 @@
         .join('');
 
       const safeId = escapeJsStr(c.card_id);
+      const cleanColor = formatColorDisplay(c.color);
 
       return `
         <div class="card-tile ${qty > 0 ? 'owned' : ''}" id="tile-${escapeHtml(c.card_id)}">
@@ -1017,7 +1178,7 @@
           <div class="card-body">
             <div class="card-id-line">
               <span>${escapeHtml(c.card_id)}</span>
-              <span>${escapeHtml(c.color || '')} • ${escapeHtml(c.card_type || '')}</span>
+              <span>${escapeHtml(cleanColor)} • ${escapeHtml(c.card_type || '')}</span>
             </div>
             <div class="card-title" onclick="openCardModal('${safeId}')">${escapeHtml(c.name)}</div>
             <div class="loc-pills" id="locs-${escapeHtml(c.card_id)}">${locBadges}</div>
@@ -1053,6 +1214,7 @@
         card.owned_qty = data.owned_qty;
         card.copies = data.copies || [];
         buildCheapestAndOwnedMaps();
+        renderDeckLocationCheckboxes();
         updateSingleCardTileUI(card);
         updateCollectionStats();
         if (activeModalCardId === cardId) {
@@ -1099,7 +1261,7 @@
       document.getElementById('attrId').textContent = c.card_id || '-';
       document.getElementById('attrRarity').textContent = c.rarity || '-';
       document.getElementById('attrType').textContent = c.card_type || '-';
-      document.getElementById('attrColor').textContent = c.color || '-';
+      document.getElementById('attrColor').textContent = formatColorDisplay(c.color) || '-';
       document.getElementById('attrCost').textContent = c.cost !== null && c.cost !== undefined ? c.cost : '-';
       document.getElementById('attrPower').textContent = c.power !== null && c.power !== undefined ? c.power : '-';
       document.getElementById('attrCounter').textContent = c.counter !== null && c.counter !== undefined ? `+${c.counter}` : '-';
@@ -1173,7 +1335,9 @@
           card.copies = data.copies;
           card.owned_qty = data.copies.length;
           buildCheapestAndOwnedMaps();
+          renderDeckLocationCheckboxes();
           updateSingleCardTileUI(card);
+          updateCollectionStats();
         }
       }
     }
@@ -1191,6 +1355,7 @@
           card.copies = data.copies || [];
           card.owned_qty = data.owned_qty;
           buildCheapestAndOwnedMaps();
+          renderDeckLocationCheckboxes();
           updateSingleCardTileUI(card);
           updateCollectionStats();
           renderModalCopiesList(card);
@@ -1213,6 +1378,7 @@
         ownerLocations = data.locations;
         input.value = '';
         populateDropdownFilters();
+        renderDeckLocationCheckboxes();
         if (activeModalCardId && cardMap.has(activeModalCardId)) {
           renderModalCopiesList(cardMap.get(activeModalCardId));
         }
@@ -1285,59 +1451,122 @@
       renderActiveDeckList();
     }
 
+    // Live Meta Deck Search Generator (Never Goes Out of Sync)
+    function searchLiveMetaDecks(site) {
+      const leaderId = document.getElementById('deckLeaderSelect').value;
+      const leader = cardMap.get(leaderId);
+      const baseLeaderId = leader ? getBaseId(leader.card_id) : '';
+      const leaderName = leader ? leader.name : '';
+
+      if (site === 'limitless') {
+        if (baseLeaderId) {
+          const q = encodeURIComponent(`site:onepiece.limitlesstcg.com/decks "${baseLeaderId}" OR "${leaderName}"`);
+          window.open(`https://www.google.com/search?q=${q}`, '_blank');
+        } else {
+          window.open(`https://onepiece.limitlesstcg.com/decks`, '_blank');
+        }
+      } else {
+        const queryStr = baseLeaderId
+          ? `${baseLeaderId} ${leaderName} One Piece TCG tournament winning decklist Limitless OR Egman OR OnePieceTopDecks`
+          : `One Piece TCG current meta tournament winning decklists Limitless Egman`;
+        window.open(`https://www.google.com/search?q=${encodeURIComponent(queryStr)}`, '_blank');
+      }
+    }
+
     function renderDeckPicker() {
       const q = document.getElementById('deckSearchInput').value.trim().toLowerCase();
       const setCode = document.getElementById('deckPickerSet').value;
       const type = document.getElementById('deckPickerType').value;
       const matchColor = document.getElementById('matchLeaderColorChk').checked;
       const cheapestOnly = document.getElementById('cheapestPrintOnlyChk').checked;
+      const prioritizeOwned = document.getElementById('prioritizeOwnedChk').checked;
+      const ownedOnly = document.getElementById('ownedOnlyDeckChk').checked;
+      const checkedLocations = getSelectedDeckLocations();
+
       const leaderId = document.getElementById('deckLeaderSelect').value;
       const leader = cardMap.get(leaderId);
-      const leaderColors = leader && leader.color ? leader.color.split('/').map(s => s.trim()) : [];
+      // Multi-colored Leader support: extracts all colors (e.g., ['Blue', 'Red'])
+      const leaderColors = leader && leader.color ? extractColors(leader.color) : [];
 
-      // Source pool: either deduplicated Cheapest Base Prints only, or all prints
       const sourceCards = cheapestOnly ? Array.from(cheapestBaseMap.values()) : allCards;
 
       const pool = sourceCards.filter(c => {
         if (c.card_type === 'Leader') return false;
         if (setCode && c.set_code !== setCode) return false;
         if (type && c.card_type !== type) return false;
+
+        // Multi-Color Leader Filter: show any card that matches any of the Leader's colors
         if (matchColor && leaderColors.length > 0) {
-          const cColors = (c.color || '').split('/').map(s => s.trim());
-          if (!cColors.some(col => leaderColors.includes(col))) return false;
+          const cColors = extractColors(c.color);
+          if (cColors.length === 0 || !cColors.some(col => leaderColors.includes(col))) return false;
         }
+
+        const baseId = getBaseId(c.card_id);
+        const ownedInfo = ownedByBaseIdMap.get(baseId) || { qty: 0, locations: [], locCounts: {} };
+
+        if (ownedOnly && ownedInfo.qty <= 0) return false;
+
+        // If user checked specific Location checkboxes (e.g. Blue Binder, Red Binder), show only cards owned in those locations
+        if (checkedLocations.length > 0) {
+          const hasInCheckedLoc = checkedLocations.some(loc => (ownedInfo.locCounts[loc] || 0) > 0);
+          if (!hasInCheckedLoc) return false;
+        }
+
         if (q) {
-          // Support searching "OP13-83" as "OP13-083" automatically
           const normalizedQ = q.replace(/^([a-z]{2,4}\d{0,2})-(\d{1,2})$/i, (_, p1, p2) => `${p1}-${p2.padStart(3, '0')}`);
-          const hay = `${c.card_id} ${getBaseId(c.card_id)} ${c.name} ${c.subtypes || ''} ${c.effect || ''}`.toLowerCase();
+          const hay = `${c.card_id} ${baseId} ${c.name} ${c.subtypes || ''} ${c.effect || ''}`.toLowerCase();
           if (!hay.includes(q) && !hay.includes(normalizedQ)) return false;
         }
         return true;
       }).sort((a, b) => {
+        const baseA = getBaseId(a.card_id);
+        const baseB = getBaseId(b.card_id);
+        const ownA = (ownedByBaseIdMap.get(baseA) || { qty: 0 }).qty;
+        const ownB = (ownedByBaseIdMap.get(baseB) || { qty: 0 }).qty;
+
+        // Prioritize owned cards at the top of the Deck Picker when checked
+        if (prioritizeOwned) {
+          if (ownA > 0 && ownB === 0) return -1;
+          if (ownB > 0 && ownA === 0) return 1;
+          if (ownA !== ownB) return ownB - ownA;
+        }
+
         const pa = a.market_price > 0 ? a.market_price : 99999;
         const pb = b.market_price > 0 ? b.market_price : 99999;
         return pa - pb;
       }).slice(0, 80);
 
       const grid = document.getElementById('deckPickerGrid');
+      if (pool.length === 0) {
+        grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:24px; color:var(--muted);">No matching cards found for current picker filters.</div>`;
+        return;
+      }
+
       grid.innerHTML = pool.map(c => {
         const baseId = getBaseId(c.card_id);
         const inDeck = currentDeckCards.find(dc => getBaseId(dc.card_id) === baseId);
         const deckQty = inDeck ? inDeck.quantity : 0;
-        const ownedInfo = ownedByBaseIdMap.get(baseId) || { qty: 0 };
+        const ownedInfo = ownedByBaseIdMap.get(baseId) || { qty: 0, locCounts: {} };
         const safeId = escapeJsStr(c.card_id);
         const img = getBestCardImage(c);
 
+        const locSummary = Object.entries(ownedInfo.locCounts || {})
+          .map(([l, cnt]) => `${l}: ${cnt}`)
+          .join(', ');
+
         return `
-          <div class="picker-card">
+          <div class="picker-card ${ownedInfo.qty > 0 ? 'owned-in-vault' : ''}">
             <img src="${escapeHtml(img)}" loading="lazy" onclick="openCardModal('${safeId}')" onerror="handleImgError(this, '${safeId}')" />
             <div style="font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${escapeHtml(c.name)}">${escapeHtml(c.name)}</div>
             <div style="color:var(--muted); font-size:0.72rem; display:flex; justify-content:space-between;">
-              <span>${escapeHtml(baseId)}</span>
+              <span>${escapeHtml(baseId)} (${escapeHtml(formatColorDisplay(c.color))})</span>
               <span style="color:var(--green-bright); font-weight:700;">$${Number(c.market_price || 0).toFixed(2)}</span>
             </div>
-            <div style="color:var(--muted); font-size:0.72rem;">Owned in Vault: <strong>${ownedInfo.qty}</strong></div>
-            <button class="btn btn-primary" style="width:100%; padding:4px;" onclick="addCardToDeck('${safeId}', 1)">
+            <div style="font-size:0.72rem; color:${ownedInfo.qty > 0 ? 'var(--accent)' : 'var(--muted)'};">
+              Vault Own: <strong>${ownedInfo.qty}</strong>
+            </div>
+            ${locSummary ? `<div style="font-size:0.68rem; color:var(--green-bright); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${escapeHtml(locSummary)}">📁 ${escapeHtml(locSummary)}</div>` : `<div style="font-size:0.68rem; color:var(--muted);">Not in Vault</div>`}
+            <button class="btn btn-primary" style="width:100%; padding:4px; margin-top:auto;" onclick="addCardToDeck('${safeId}', 1)">
               + Add (${deckQty}/4)
             </button>
           </div>
@@ -1382,7 +1611,7 @@
         document.getElementById('deckTotalCount').textContent = '0';
         document.getElementById('deckTotalValue').textContent = '$0.00';
         document.getElementById('deckMissingValue').textContent = '$0.00';
-        listEl.innerHTML = `<div style="color:var(--muted); padding:20px; text-align:center;">No cards in deck yet. Choose a Championship Tournament Deck above, click "Auto-Build", or pick cards on the left.</div>`;
+        listEl.innerHTML = `<div style="color:var(--muted); padding:20px; text-align:center;">No cards in deck yet. Pick owned cards on the left, search live tournament decks above, or click "Auto-Fill 50-Card Curve".</div>`;
         return;
       }
 
@@ -1429,38 +1658,16 @@
       document.getElementById('deckMissingValue').textContent = `$${missingValue.toFixed(2)}`;
     }
 
-    async function loadTournamentPreset() {
-      const tourneyId = document.getElementById('tournamentDeckSelect').value;
-      if (!tourneyId) {
-        alert('Select a Championship Tournament Deck from the dropdown first.');
-        return;
-      }
-      const res = await fetch('/api/decks/meta-suggest', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tournament_id: tourneyId })
-      });
-      const data = await res.json();
-      if (data.cards) {
-        document.getElementById('deckNameInput').value = data.deck_name || '';
-        document.getElementById('deckLeaderSelect').value = data.leader_card_id || '';
-        document.getElementById('deckNotesInput').value = data.notes || '';
-        currentDeckCards = data.cards;
-        renderDeckPicker();
-        renderActiveDeckList();
-      }
-    }
-
     async function suggestMetaDeck() {
       const leaderId = document.getElementById('deckLeaderSelect').value;
       if (!leaderId) {
-        alert('Please select a Leader Card first (or choose a Championship Tournament Deck from the dropdown above).');
+        alert('Please select a Leader Card first so we can match its colors and traits.');
         return;
       }
       const res = await fetch('/api/decks/meta-suggest', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ leader_card_id: leaderId })
+        body: JSON.stringify({ leader_card_id: leaderId, owner: activeOwner })
       });
       const data = await res.json();
       if (data.cards) {
@@ -1585,7 +1792,7 @@
           baseId,
           `"${(c.name || '').replace(/"/g, '""')}"`,
           c.card_type || '',
-          c.color || '',
+          formatColorDisplay(c.color),
           deckQty,
           ownedQty,
           missingQty,

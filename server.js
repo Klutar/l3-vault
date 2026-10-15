@@ -9,109 +9,14 @@ const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'l3_vault.db');
 let db;
 let isSyncing = false;
 
-// Verified Tournament Decklists (Limitless TCG / Championship Finals)
-const TOURNAMENT_DECKS = [
-  {
-    id: 'tourney_rg_luffy_op13',
-    name: '🏆 Red/Green Luffy (Championship Top 4 - OP13-001)',
-    leader_card_id: 'OP13-001',
-    notes: 'Tournament Meta Build (Limitless TCG Championship Finals). Uses cheapest regular prints.',
-    cards: [
-      { card_id: 'OP01-016', quantity: 4 },
-      { card_id: 'OP13-016', quantity: 4 },
-      { card_id: 'ST01-007', quantity: 2 },
-      { card_id: 'ST01-006', quantity: 1 },
-      { card_id: 'OP14-034', quantity: 4 },
-      { card_id: 'OP10-032', quantity: 2 },
-      { card_id: 'OP14-022', quantity: 4 },
-      { card_id: 'OP14-031', quantity: 4 },
-      { card_id: 'OP13-037', quantity: 2 },
-      { card_id: 'OP10-011', quantity: 1 },
-      { card_id: 'OP13-027', quantity: 4 },
-      { card_id: 'OP13-118', quantity: 4 },
-      { card_id: 'OP06-118', quantity: 1 },
-      { card_id: 'OP01-030', quantity: 4 },
-      { card_id: 'OP12-037', quantity: 1 },
-      { card_id: 'OP05-038', quantity: 4 },
-      { card_id: 'OP01-027', quantity: 4 }
-    ]
-  },
-  {
-    id: 'tourney_rb_ace_op13',
-    name: '🏆 Red/Blue Ace (1st Place Championship Finals - OP13-002)',
-    leader_card_id: 'OP13-002',
-    notes: '1st Place Championship Finals Whitebeard Pirates Engine. Uses cheapest regular prints.',
-    cards: [
-      { card_id: 'ST22-002', quantity: 4 },
-      { card_id: 'OP13-016', quantity: 4 },
-      { card_id: 'OP13-043', quantity: 4 },
-      { card_id: 'OP13-007', quantity: 2 },
-      { card_id: 'PRB02-008', quantity: 4 },
-      { card_id: 'OP02-008', quantity: 2 },
-      { card_id: 'OP06-047', quantity: 2 },
-      { card_id: 'OP10-045', quantity: 2 },
-      { card_id: 'OP08-040', quantity: 1 },
-      { card_id: 'OP13-054', quantity: 4 },
-      { card_id: 'OP08-047', quantity: 4 },
-      { card_id: 'ST23-001', quantity: 2 },
-      { card_id: 'OP02-004', quantity: 1 },
-      { card_id: 'OP13-042', quantity: 4 },
-      { card_id: 'OP09-118', quantity: 1 },
-      { card_id: 'OP01-027', quantity: 2 },
-      { card_id: 'OP04-056', quantity: 3 },
-      { card_id: 'ST22-015', quantity: 4 }
-    ]
-  },
-  {
-    id: 'tourney_purple_doffy_op14',
-    name: '🏆 Purple Doflamingo (2nd Place Championship Finals - OP14-060)',
-    leader_card_id: 'OP14-060',
-    notes: '2nd Place Donquixote Pirates Tournament Build. Uses cheapest regular prints.',
-    cards: [
-      { card_id: 'OP10-065', quantity: 4 },
-      { card_id: 'OP14-067', quantity: 4 },
-      { card_id: 'ST18-001', quantity: 3 },
-      { card_id: 'OP10-062', quantity: 1 },
-      { card_id: 'OP14-063', quantity: 4 },
-      { card_id: 'OP14-072', quantity: 3 },
-      { card_id: 'OP14-061', quantity: 4 },
-      { card_id: 'OP14-074', quantity: 4 },
-      { card_id: 'OP10-072', quantity: 2 },
-      { card_id: 'OP12-076', quantity: 2 },
-      { card_id: 'OP14-068', quantity: 2 },
-      { card_id: 'OP14-071', quantity: 1 },
-      { card_id: 'OP10-071', quantity: 4 },
-      { card_id: 'OP14-069', quantity: 3 },
-      { card_id: 'OP13-076', quantity: 4 },
-      { card_id: 'OP07-076', quantity: 4 },
-      { card_id: 'OP14-078', quantity: 1 }
-    ]
-  },
-  {
-    id: 'tourney_py_rosinante_op12',
-    name: '🏆 Purple/Yellow Rosinante (Top 4 Championship Finals - OP12-061)',
-    leader_card_id: 'OP12-061',
-    notes: 'Top 4 Law & Rosinante Supernovas / Donquixote Build. Uses cheapest regular prints.',
-    cards: [
-      { card_id: 'OP09-069', quantity: 4 },
-      { card_id: 'OP10-065', quantity: 4 },
-      { card_id: 'OP12-108', quantity: 4 },
-      { card_id: 'ST18-001', quantity: 3 },
-      { card_id: 'OP05-069', quantity: 2 },
-      { card_id: 'ST10-010', quantity: 4 },
-      { card_id: 'P-088', quantity: 4 },
-      { card_id: 'P-093', quantity: 4 },
-      { card_id: 'OP12-112', quantity: 2 },
-      { card_id: 'ST10-008', quantity: 1 },
-      { card_id: 'EB04-038', quantity: 4 },
-      { card_id: 'OP12-073', quantity: 4 },
-      { card_id: 'OP13-076', quantity: 1 },
-      { card_id: 'OP12-115', quantity: 4 },
-      { card_id: 'OP14-078', quantity: 3 },
-      { card_id: 'OP05-077', quantity: 2 }
-    ]
-  }
-];
+const OP_COLORS = ['Red', 'Green', 'Blue', 'Purple', 'Black', 'Yellow'];
+
+// Reliably extract all One Piece colors regardless of separator (/, ;, comma, or space)
+function extractColors(colorStr) {
+  if (!colorStr) return [];
+  const lower = String(colorStr).toLowerCase();
+  return OP_COLORS.filter(c => lower.includes(c.toLowerCase()));
+}
 
 function initDatabase() {
   console.log('Initializing SQLite database at:', DB_PATH);
@@ -180,29 +85,6 @@ function initDatabase() {
     db.exec(`ALTER TABLE decks ADD COLUMN owner TEXT DEFAULT 'Larry''s Collection'`);
   } catch (e) {}
 
-  // Clean out old preset default locations if they are unused so users only see their own custom locations
-  try {
-    const cleanedPresets = db.prepare(`SELECT value FROM meta WHERE key='cleaned_preset_locations_v3'`).get();
-    if (!cleanedPresets) {
-      const oldDefaults = ['Red Folder', 'Blue Folder', 'Trade Binder', 'Robin Deck', 'Deck Box', 'Top Loader'];
-      const delLoc = db.prepare(`
-        DELETE FROM locations
-        WHERE name = ?
-          AND NOT EXISTS (
-            SELECT 1 FROM collection_copies
-            WHERE collection_copies.owner = locations.owner
-              AND collection_copies.location = locations.name
-          )
-      `);
-      for (const preset of oldDefaults) {
-        delLoc.run(preset);
-      }
-      db.prepare(`INSERT OR REPLACE INTO meta (key, value) VALUES ('cleaned_preset_locations_v3', 'true')`).run();
-    }
-  } catch (e) {
-    console.error('Preset location cleanup note:', e.message);
-  }
-
   // Ensure 'Unassigned' always exists as the base fallback for each collection
   const defaultOwners = ["Larry's Collection", "Graham's Collection"];
   const insertLoc = db.prepare(`INSERT OR IGNORE INTO locations (owner, name) VALUES (?, 'Unassigned')`);
@@ -230,13 +112,11 @@ function getExt(extendedData, ...keys) {
   return null;
 }
 
-// Helper: Extract base card ID (e.g., "OP13-083 (Parallel)" -> "OP13-083")
 function getBaseCardId(cardId) {
   const match = String(cardId || '').match(/^([A-Z]{1,4}\d{0,2}-\d{3})/i);
   return match ? match[1].toUpperCase() : String(cardId || '').split(' ')[0].trim();
 }
 
-// Helper: Resolve any card ID to its cheapest regular print in the DB
 function resolveCheapestPrintId(rawCardId) {
   const baseId = getBaseCardId(rawCardId);
   const candidates = db.prepare(`
@@ -250,7 +130,6 @@ function resolveCheapestPrintId(rawCardId) {
 
   if (!candidates || candidates.length === 0) return baseId;
 
-  // Prefer regular print (not Parallel / Manga / Alternate Art / SP / Box Topper) with lowest price
   const regularCandidates = candidates.filter(
     c => !/\((Parallel|Alternate Art|Manga|Box Topper|SP|TR|Foil)\)/i.test(c.card_id) &&
          !/\((Parallel|Alternate Art|Manga|Box Topper|SP|TR)\)/i.test(c.name || '')
@@ -266,7 +145,7 @@ function resolveCheapestPrintId(rawCardId) {
 async function fetchJson(url) {
   const res = await fetch(url, {
     headers: {
-      'User-Agent': 'L3Vault/3.0.0 (One Piece TCG Collection Database)',
+      'User-Agent': 'L3Vault/4.0.0 (One Piece TCG Collection Database)',
       'Accept': 'application/json'
     }
   });
@@ -339,7 +218,10 @@ async function syncAllPricesAndCards() {
 
           const baseId = getBaseCardId(cardId);
           const setCode = baseId.includes('-') ? baseId.split('-')[0] : (group.abbreviation || group.name);
-          const color = getExt(ext, 'Color') || 'Unknown';
+          const rawColor = getExt(ext, 'Color') || 'Unknown';
+          const parsedColors = extractColors(rawColor);
+          const normalizedColor = parsedColors.length > 0 ? parsedColors.join('/') : rawColor;
+
           const cardType = getExt(ext, 'CardType', 'Card Type') || 'Card';
           const costVal = parseInt(getExt(ext, 'Cost', 'Life'), 10);
           const powerVal = parseInt(getExt(ext, 'Power'), 10);
@@ -352,7 +234,7 @@ async function syncAllPricesAndCards() {
           const marketPrice = priceMap.get(prod.productId) || 0.0;
 
           upsertCard.run(
-            cardId, prod.name, setCode, group.name, rarity, color, cardType,
+            cardId, prod.name, setCode, group.name, rarity, normalizedColor, cardType,
             Number.isNaN(costVal) ? null : costVal,
             Number.isNaN(powerVal) ? null : powerVal,
             Number.isNaN(counterVal) ? null : counterVal,
@@ -405,7 +287,7 @@ const server = http.createServer(async (req, res) => {
       return res.end(fs.readFileSync(htmlPath, 'utf8'));
     }
 
-    // Get All Cards + Owner Collection + Custom Locations + Tournament Templates
+    // Get All Cards + Owner Collection + Custom Locations
     if (req.method === 'GET' && pathname === '/api/cards') {
       const owner = urlObj.searchParams.get('owner') || "Larry's Collection";
 
@@ -438,7 +320,6 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, {
         cards: enrichedCards,
         locations: rawLocations.length ? rawLocations : ['Unassigned'],
-        tournamentDecks: TOURNAMENT_DECKS,
         lastSync: syncRow ? syncRow.value : (isSyncing ? 'Syncing catalog in background...' : 'Ready'),
         isSyncing
       });
@@ -618,50 +499,23 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { success: true });
     }
 
-    // Smart Meta / Tournament Suggestion (Always Picks Cheapest Regular Print)
+    // Auto-Build 50-Card Synergy Deck (Supports Multi-Color Leaders & Owned Cards Priority)
     if (req.method === 'POST' && pathname === '/api/decks/meta-suggest') {
-      const { leader_card_id, tournament_id } = await readJsonBody(req);
-
-      // 1. If a specific Tournament Deck was requested, load & resolve each card to its cheapest regular print
-      if (tournament_id) {
-        const tDeck = TOURNAMENT_DECKS.find(t => t.id === tournament_id);
-        if (tDeck) {
-          const resolvedCards = tDeck.cards.map(item => ({
-            card_id: resolveCheapestPrintId(item.card_id),
-            quantity: item.quantity
-          }));
-          return sendJson(res, 200, {
-            deck_name: tDeck.name,
-            leader_card_id: resolveCheapestPrintId(tDeck.leader_card_id),
-            notes: tDeck.notes,
-            cards: resolvedCards
-          });
-        }
-      }
-
-      // 2. If the chosen Leader matches one of our verified Tournament Decks, use that tournament list!
+      const { leader_card_id, owner = "Larry's Collection" } = await readJsonBody(req);
       const baseLeaderId = getBaseCardId(leader_card_id);
-      const matchingTourney = TOURNAMENT_DECKS.find(t => getBaseCardId(t.leader_card_id) === baseLeaderId);
-      if (matchingTourney) {
-        const resolvedCards = matchingTourney.cards.map(item => ({
-          card_id: resolveCheapestPrintId(item.card_id),
-          quantity: item.quantity
-        }));
-        return sendJson(res, 200, {
-          deck_name: matchingTourney.name,
-          leader_card_id: resolveCheapestPrintId(matchingTourney.leader_card_id),
-          notes: matchingTourney.notes,
-          cards: resolvedCards
-        });
-      }
-
-      // 3. Otherwise, build a 50-card tournament curve using ONLY the CHEAPEST REGULAR PRINTS for that Leader's colors & traits
       const leader = db.prepare(`SELECT * FROM cards WHERE card_id = ? OR card_id LIKE ? LIMIT 1`).get(leader_card_id, `${baseLeaderId}%`);
       const leaderName = leader ? leader.name : 'Custom Leader';
-      const rawColors = leader && leader.color ? leader.color.split('/').map(s => s.trim()) : ['Red'];
+      const leaderColors = leader && leader.color ? extractColors(leader.color) : ['Red'];
       const primarySubtype = leader && leader.subtypes ? leader.subtypes.split('/')[0].trim() : '';
 
-      // Pull all non-leader cards, filter out expensive alternate/manga variants, and keep only the cheapest print per base Card ID
+      // Check which cards the user already owns so we can favor owned cards
+      const ownedRows = db.prepare(`SELECT card_id, COUNT(*) as cnt FROM collection_copies WHERE owner = ? GROUP BY card_id`).all(owner);
+      const ownedByBase = new Map();
+      for (const r of ownedRows) {
+        const bId = getBaseCardId(r.card_id);
+        ownedByBase.set(bId, (ownedByBase.get(bId) || 0) + Number(r.cnt));
+      }
+
       const rawPool = db.prepare(`
         SELECT * FROM cards
         WHERE card_type IN ('Character', 'Event', 'Stage')
@@ -671,13 +525,12 @@ const server = http.createServer(async (req, res) => {
       const cheapestByBaseId = new Map();
       for (const c of rawPool) {
         if (!c.color) continue;
-        // Skip Manga / Alt Art / Parallel / SP variants
         if (/\((Parallel|Alternate Art|Manga|Box Topper|SP|TR|Foil)\)/i.test(c.card_id) ||
             /\((Parallel|Alternate Art|Manga|Box Topper|SP|TR)\)/i.test(c.name || '')) {
           continue;
         }
-        const cardColors = c.color.split('/').map(s => s.trim());
-        if (!cardColors.some(cc => rawColors.includes(cc))) continue;
+        const cardColors = extractColors(c.color);
+        if (cardColors.length === 0 || !cardColors.some(cc => leaderColors.includes(cc))) continue;
 
         const bId = getBaseCardId(c.card_id);
         if (!cheapestByBaseId.has(bId)) {
@@ -690,7 +543,17 @@ const server = http.createServer(async (req, res) => {
         }
       }
 
-      const allPool = Array.from(cheapestByBaseId.values());
+      // Sort pool so cards owned in the active Vault are prioritized first, then cheapest regular print
+      const allPool = Array.from(cheapestByBaseId.values()).sort((a, b) => {
+        const ownA = ownedByBase.get(getBaseCardId(a.card_id)) || 0;
+        const ownB = ownedByBase.get(getBaseCardId(b.card_id)) || 0;
+        if (ownA > 0 && ownB === 0) return -1;
+        if (ownB > 0 && ownA === 0) return 1;
+        const pa = a.market_price > 0 ? a.market_price : 9999;
+        const pb = b.market_price > 0 ? b.market_price : 9999;
+        return pa - pb;
+      });
+
       const picked = [];
       let totalCards = 0;
 
@@ -710,7 +573,6 @@ const server = http.createServer(async (req, res) => {
         }
       };
 
-      // Build competitive 50-card curve (Cheapest Regular Prints First)
       addGroup(c => c.counter === 2000 && (primarySubtype ? (c.subtypes || '').includes(primarySubtype) : true), 8, 4);
       addGroup(c => c.counter === 2000, 4, 4);
       addGroup(c => c.card_type === 'Character' && c.cost >= 1 && c.cost <= 3 && (primarySubtype ? (c.subtypes || '').includes(primarySubtype) : true), 12, 4);
@@ -720,9 +582,9 @@ const server = http.createServer(async (req, res) => {
       addGroup(() => true, 50 - totalCards, 4);
 
       return sendJson(res, 200, {
-        deck_name: `${leaderName} (${rawColors.join('/')}) Budget Tournament Curve`,
+        deck_name: `${leaderName} (${leaderColors.join('/')}) Synergy Deck`,
         leader_card_id: leader ? leader.card_id : leader_card_id,
-        notes: `Built with cheapest regular prints for ${leaderName}: +2000 Counters, ${primarySubtype || rawColors[0]} synergy engine, mid-range blockers, and finishers.`,
+        notes: `Built for ${leaderName} (${leaderColors.join('/')}): prioritizes your owned Vault cards & cheapest regular prints.`,
         cards: picked
       });
     }
@@ -735,7 +597,7 @@ const server = http.createServer(async (req, res) => {
       const deckCards = db.prepare(`SELECT * FROM deck_cards`).all();
 
       return sendJson(res, 200, {
-        version: 3,
+        version: 4,
         exportedAt: new Date().toISOString(),
         locations,
         copies,
