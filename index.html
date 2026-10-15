@@ -3,497 +3,1442 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>L3-Vault | One Piece TCG Database & Deck Builder</title>
+  <title>L3-Vault | One Piece TCG Collection & Deck Manager</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-    body { background-color: #0f172a; color: #f8fafc; padding: 24px; }
-    header { max-width: 1320px; margin: 0 auto 16px auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; border-bottom: 1px solid #334155; padding-bottom: 14px; }
-    .brand-wrap { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
-    h1 { font-size: 1.8rem; color: #38bdf8; letter-spacing: 0.5px; }
-    .sync-meta { font-size: 0.8rem; color: #94a3b8; }
+    :root {
+      --bg: #0d1117;
+      --panel: #161b22;
+      --panel-alt: #1f2630;
+      --border: #30363d;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --accent: #f0883e;
+      --accent-hover: #ff9b50;
+      --green: #238636;
+      --green-bright: #3fb950;
+      --red: #da3633;
+      --blue: #2f81f7;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    /* Header */
+    header {
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 24px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .brand h1 {
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: var(--accent);
+      letter-spacing: 0.5px;
+    }
+    .vault-switcher {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--panel-alt);
+      padding: 6px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--accent);
+    }
+    .vault-switcher label {
+      font-size: 0.8rem;
+      color: var(--muted);
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .vault-switcher select {
+      background: transparent;
+      color: #fff;
+      font-weight: 700;
+      font-size: 0.95rem;
+      border: none;
+      outline: none;
+      cursor: pointer;
+    }
+    .vault-switcher select option {
+      background: var(--panel);
+      color: var(--text);
+    }
+    .nav-tabs {
+      display: flex;
+      gap: 8px;
+    }
+    .tab-btn {
+      background: var(--panel-alt);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+    .tab-btn.active {
+      background: var(--accent);
+      color: #000;
+      border-color: var(--accent);
+    }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      background: var(--panel-alt);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 7px 13px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+      transition: 0.15s;
+    }
+    .btn:hover { border-color: var(--muted); }
+    .btn-primary { background: var(--accent); color: #000; border-color: var(--accent); }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-green { background: var(--green); color: #fff; border-color: var(--green); }
+    .btn-red { background: var(--red); color: #fff; border-color: var(--red); }
 
-    .header-right { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
-    .stats { display: flex; gap: 16px; font-size: 0.9rem; color: #cbd5e1; flex-wrap: wrap; }
-    .stats span strong { color: #f8fafc; font-size: 1.05rem; }
-    .stats .vault-val strong { color: #4ade80; }
+    /* Stats Bar */
+    .stats-bar {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      padding: 16px 24px;
+      background: #11161d;
+      border-bottom: 1px solid var(--border);
+    }
+    .stat-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      padding: 12px 16px;
+      border-radius: 8px;
+    }
+    .stat-label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; }
+    .stat-value { font-size: 1.35rem; font-weight: 800; margin-top: 4px; color: #fff; }
+    .stat-value.price { color: var(--green-bright); }
 
-    .nav-tabs { max-width: 1320px; margin: 0 auto 16px auto; display: flex; gap: 10px; border-bottom: 1px solid #334155; padding-bottom: 12px; }
-    .tab-btn { background: #1e293b; color: #cbd5e1; border: 1px solid #334155; padding: 8px 18px; border-radius: 6px; font-weight: 600; cursor: pointer; }
-    .tab-btn.active { background: #38bdf8; color: #0f172a; border-color: #38bdf8; }
+    /* Filter Bar */
+    .filter-bar {
+      padding: 14px 24px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+    input, select, textarea {
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+    .filter-bar input[type="text"] { flex: 1; min-width: 220px; }
 
-    .action-bar { max-width: 1320px; margin: 0 auto 16px auto; display: flex; gap: 12px; flex-wrap: wrap; background: #1e293b; padding: 12px; border-radius: 8px; border: 1px solid #334155; align-items: center; }
-    .quick-add-group { display: flex; gap: 8px; flex: 1; min-width: 280px; align-items: center; }
-    .quick-input { flex: 1; background: #0f172a; color: #f8fafc; border: 1px solid #38bdf8; padding: 8px 12px; border-radius: 6px; font-size: 0.9rem; }
-    .sync-btn { background: #10b981; color: #052e16; border: none; padding: 8px 14px; border-radius: 6px; font-weight: 700; font-size: 0.85rem; cursor: pointer; }
-    .sync-btn:hover { background: #059669; color: white; }
+    /* Card Grid */
+    .container { padding: 20px 24px; }
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
+      gap: 16px;
+    }
+    .card-tile {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.15s, border-color 0.15s;
+    }
+    .card-tile:hover { border-color: var(--accent); transform: translateY(-2px); }
+    .card-tile.owned { border-color: var(--green); }
+    .card-img-wrap {
+      position: relative;
+      background: #080b0f;
+      aspect-ratio: 2.5 / 3.5;
+      cursor: pointer;
+      overflow: hidden;
+    }
+    .card-img-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+    .price-badge {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: rgba(13, 17, 23, 0.9);
+      color: var(--green-bright);
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 0.8rem;
+      border: 1px solid var(--border);
+    }
+    .rarity-badge {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      background: rgba(13, 17, 23, 0.9);
+      color: var(--accent);
+      padding: 3px 7px;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 0.75rem;
+    }
+    .card-body {
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+    }
+    .card-id-line {
+      font-size: 0.75rem;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+    }
+    .card-title {
+      font-weight: 700;
+      font-size: 0.92rem;
+      cursor: pointer;
+      line-height: 1.25;
+    }
+    .card-title:hover { color: var(--accent); }
+    .loc-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      min-height: 20px;
+    }
+    .loc-pill {
+      font-size: 0.7rem;
+      background: var(--panel-alt);
+      color: #9ecbff;
+      border: 1px solid #2f81f755;
+      padding: 1px 6px;
+      border-radius: 4px;
+    }
+    .card-controls {
+      margin-top: auto;
+      padding-top: 8px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .qty-stepper {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .qty-btn {
+      width: 30px;
+      height: 30px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--panel-alt);
+      color: #fff;
+      font-size: 1.1rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .qty-btn:hover { background: var(--accent); color: #000; border-color: var(--accent); }
+    .qty-num { font-weight: 800; font-size: 1rem; min-width: 24px; text-align: center; }
 
-    .controls { max-width: 1320px; margin: 0 auto 12px auto; display: flex; gap: 10px; flex-wrap: wrap; }
-    input, select { background: #1e293b; color: #f8fafc; border: 1px solid #334155; padding: 9px 12px; border-radius: 6px; font-size: 0.9rem; }
-    input.search-main { flex: 1; min-width: 200px; }
-    select.sort-select { border-color: #38bdf8; font-weight: 600; }
-    .reset-btn { background: #334155; color: #f8fafc; border: 1px solid #475569; padding: 9px 14px; border-radius: 6px; font-size: 0.9rem; cursor: pointer; font-weight: 600; }
-    .reset-btn:hover { background: #475569; }
+    /* Modal */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.78);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      padding: 20px;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal-content {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      max-width: 900px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 24px;
+      position: relative;
+    }
+    .modal-close {
+      position: absolute;
+      top: 14px;
+      right: 16px;
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      font-size: 1.6rem;
+      cursor: pointer;
+    }
+    .modal-grid {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      gap: 24px;
+    }
+    @media (max-width: 720px) {
+      .modal-grid { grid-template-columns: 1fr; }
+    }
+    .modal-img {
+      width: 100%;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+    .attr-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(115px, 1fr));
+      gap: 8px;
+      margin: 12px 0;
+    }
+    .attr-box {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      padding: 8px 10px;
+      border-radius: 6px;
+    }
+    .attr-box span { display: block; font-size: 0.7rem; color: var(--muted); text-transform: uppercase; }
+    .attr-box strong { font-size: 0.92rem; color: #fff; }
+    .effect-box {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 0.88rem;
+      line-height: 1.5;
+      color: #d0d7de;
+      margin-bottom: 18px;
+      white-space: pre-wrap;
+    }
+    .copies-section {
+      border-top: 1px solid var(--border);
+      padding-top: 14px;
+    }
+    .copy-row {
+      display: grid;
+      grid-template-columns: 80px 1fr 95px 1fr auto;
+      gap: 8px;
+      align-items: center;
+      background: var(--bg);
+      padding: 8px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      margin-bottom: 8px;
+    }
+    @media (max-width: 640px) {
+      .copy-row { grid-template-columns: 1fr 1fr; }
+    }
 
-    .results-bar { max-width: 1320px; margin: 0 auto 16px auto; font-size: 0.85rem; color: #94a3b8; display: flex; justify-content: space-between; }
-
-    .grid { max-width: 1320px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 18px; }
-    .card { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 14px; display: flex; flex-direction: column; justify-content: space-between; transition: transform 0.15s; }
-    .card:hover { transform: translateY(-3px); border-color: #475569; }
-    .card-img-wrap { width: 100%; aspect-ratio: 63 / 88; background: #0f172a; border-radius: 8px; overflow: hidden; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; padding: 6px; cursor: pointer; }
-    .card-img-wrap img { width: 100%; height: 100%; object-fit: contain; border-radius: 6px; }
-    .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-    .card-id { font-size: 0.8rem; color: #94a3b8; font-weight: bold; }
-    .price-tag { font-size: 0.85rem; font-weight: bold; color: #4ade80; background: #064e3b; padding: 2px 7px; border-radius: 4px; }
-    .card-name { font-size: 1.05rem; font-weight: bold; margin-bottom: 4px; color: #f1f5f9; cursor: pointer; }
-    .card-name:hover { color: #38bdf8; }
-    .card-set { font-size: 0.78rem; color: #38bdf8; margin-bottom: 6px; }
-    .card-meta { font-size: 0.8rem; color: #cbd5e1; margin-bottom: 8px; }
-    .location-badge { font-size: 0.75rem; color: #f59e0b; background: #78350f; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-bottom: 8px; }
-
-    .collection-bar { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #334155; padding-top: 10px; margin-top: 4px; }
-    .qty-controls { display: flex; align-items: center; gap: 8px; }
-    .qty-btn { background: #38bdf8; color: #0f172a; border: none; width: 28px; height: 28px; border-radius: 6px; font-weight: bold; font-size: 1.1rem; cursor: pointer; }
-    .qty-btn:hover { background: #0284c7; color: white; }
-    .qty-input { width: 42px; text-align: center; background: #0f172a; color: #f8fafc; border: 1px solid #334155; border-radius: 6px; font-size: 1rem; font-weight: bold; padding: 2px; }
-
-    /* Modal Pop-up Styles */
-    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 20px; }
-    .modal { background: #1e293b; border: 1px solid #334155; border-radius: 12px; width: 100%; max-width: 500px; padding: 24px; display: flex; flex-direction: column; gap: 16px; }
-    .modal h2 { color: #38bdf8; font-size: 1.3rem; }
-    .modal label { font-size: 0.85rem; color: #cbd5e1; display: flex; flex-direction: column; gap: 6px; }
-    .modal input, .modal select, .modal textarea { background: #0f172a; color: #f8fafc; border: 1px solid #334155; padding: 10px; border-radius: 6px; font-size: 0.95rem; }
-    .modal-btns { display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; }
-    .btn-primary { background: #38bdf8; color: #0f172a; border: none; padding: 10px 18px; border-radius: 6px; font-weight: bold; cursor: pointer; }
-    .btn-secondary { background: #334155; color: #f8fafc; border: none; padding: 10px 18px; border-radius: 6px; font-weight: bold; cursor: pointer; }
-
-    /* Deck Builder View */
-    .deck-container { max-width: 1320px; margin: 0 auto; display: none; grid-template-columns: 320px 1fr; gap: 20px; }
-    .deck-sidebar { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 14px; height: fit-content; }
-    .deck-list-item { padding: 10px; background: #0f172a; border-radius: 6px; border: 1px solid #334155; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
-    .deck-list-item.active { border-color: #38bdf8; }
-    .deck-workspace { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+    /* Deck Builder Layout */
+    .deck-workspace {
+      display: grid;
+      grid-template-columns: 1.15fr 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+    @media (max-width: 960px) {
+      .deck-workspace { grid-template-columns: 1fr; }
+    }
+    .panel-box {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+    }
+    .picker-list {
+      max-height: 600px;
+      overflow-y: auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(145px, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .picker-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      font-size: 0.8rem;
+    }
+    .picker-card img {
+      width: 100%;
+      aspect-ratio: 2.5/3.5;
+      object-fit: contain;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .deck-card-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 8px 10px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      margin-bottom: 6px;
+      font-size: 0.85rem;
+    }
+    .hidden { display: none !important; }
   </style>
 </head>
 <body>
 
   <header>
-    <div class="brand-wrap">
-      <h1>L3-VAULT</h1>
-      <span class="sync-meta">Prices Synced: <strong id="last-sync">Loading...</strong></span>
-    </div>
-    <div class="header-right">
-      <div class="stats">
-        <span>Database Cards: <strong id="total-db">0</strong></span>
-        <span>Unique Owned: <strong id="unique-owned">0</strong></span>
-        <span>Total Vault Qty: <strong id="total-owned">0</strong></span>
-        <span class="vault-val">Est. Vault Value: <strong id="vault-value">$0.00</strong></span>
+    <div class="brand">
+      <h1>🏴‍☠️ L3-VAULT</h1>
+      <div class="vault-switcher">
+        <label for="vaultOwnerSelect">Collection:</label>
+        <select id="vaultOwnerSelect" onchange="switchVaultOwner(this.value)">
+          <option value="Larry's Collection">Larry's Collection</option>
+          <option value="Graham's Collection">Graham's Collection</option>
+        </select>
       </div>
-      <button class="sync-btn" onclick="syncPrices()">↻ Update Prices</button>
+    </div>
+
+    <div class="nav-tabs">
+      <button id="tabCatalogBtn" class="tab-btn active" onclick="switchTab('catalog')">Card Catalog & Vault</button>
+      <button id="tabDecksBtn" class="tab-btn" onclick="switchTab('decks')">Competitive Deck Builder</button>
+    </div>
+
+    <div class="header-actions">
+      <span id="syncStatusText" style="font-size:0.78rem; color:var(--muted);"></span>
+      <button class="btn" onclick="triggerPriceSync()" id="syncBtn">🔄 Sync New Sets & Prices</button>
+      <button class="btn" onclick="downloadBackup()">⬇ Backup Vault</button>
+      <button class="btn" onclick="document.getElementById('restoreFileInput').click()">⬆ Restore</button>
+      <input type="file" id="restoreFileInput" accept=".json" style="display:none" onchange="restoreBackupFile(event)" />
     </div>
   </header>
 
-  <div class="nav-tabs">
-    <button class="tab-btn active" onclick="switchTab('vault')">📦 My Card Vault</button>
-    <button class="tab-btn" onclick="switchTab('decks')">⚔️ Competitive Deck Builder</button>
+  <!-- Summary Stats Bar -->
+  <div class="stats-bar">
+    <div class="stat-card">
+      <div class="stat-label">Active Vault</div>
+      <div class="stat-value" id="statActiveOwner">Larry's Collection</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Total Cards Owned</div>
+      <div class="stat-value" id="statTotalOwned">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Unique Cards Owned</div>
+      <div class="stat-value" id="statUniqueOwned">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Collection Market Value</div>
+      <div class="stat-value price" id="statTotalValue">$0.00</div>
+    </div>
   </div>
 
-  <!-- VAULT VIEW -->
-  <div id="view-vault">
-    <div class="action-bar">
-      <div class="quick-add-group">
-        <label for="quick-add-input" style="font-size: 0.85rem; font-weight: 600; color: #38bdf8; white-space: nowrap;">⚡ Quick-Add Card #:</label>
-        <input type="text" id="quick-add-input" class="quick-input" placeholder="Type ID (e.g. OP01-001) & press Enter..." onkeydown="handleQuickAdd(event)" />
-      </div>
-      <span style="font-size: 0.8rem; color: #94a3b8;">Tip: Type any card ID and hit Enter to instantly increment your vault quantity. Click card image/name to edit binder location & notes.</span>
-    </div>
-
-    <div class="controls">
-      <input type="text" id="search" class="search-main" placeholder="Search card name, ID, effect text, or crew..." />
-
-      <select id="sort-by" class="sort-select">
-        <option value="id-asc">Sort: Card # (A → Z)</option>
-        <option value="id-desc">Sort: Card # (Z → A)</option>
-        <option value="price-desc">Sort: Price (High → Low)</option>
-        <option value="price-asc">Sort: Price (Low → High)</option>
-        <option value="qty-desc">Sort: Owned Qty (High → Low)</option>
-        <option value="name-asc">Sort: Name (A → Z)</option>
-        <option value="power-desc">Sort: Power (High → Low)</option>
+  <!-- TAB 1: CARD CATALOG & VAULT -->
+  <div id="catalogView">
+    <div class="filter-bar">
+      <input type="text" id="searchInput" placeholder="Search by card name, ID (OP01-001), subtype (Straw Hat), or effect..." oninput="resetAndRenderCatalog()" />
+      <select id="setFilter" onchange="resetAndRenderCatalog()">
+        <option value="">All Sets</option>
       </select>
-
-      <select id="set-filter"><option value="">All Sets</option></select>
-      <select id="color-filter">
+      <select id="colorFilter" onchange="resetAndRenderCatalog()">
         <option value="">All Colors</option>
-        <option value="Red">Red</option><option value="Green">Green</option>
-        <option value="Blue">Blue</option><option value="Purple">Purple</option>
-        <option value="Black">Black</option><option value="Yellow">Yellow</option>
+        <option value="Red">Red</option>
+        <option value="Green">Green</option>
+        <option value="Blue">Blue</option>
+        <option value="Purple">Purple</option>
+        <option value="Black">Black</option>
+        <option value="Yellow">Yellow</option>
       </select>
-      <select id="type-filter"><option value="">All Types</option></select>
-      <select id="rarity-filter"><option value="">All Rarities</option></select>
-      <select id="ownership-filter">
+      <select id="typeFilter" onchange="resetAndRenderCatalog()">
+        <option value="">All Card Types</option>
+        <option value="Leader">Leader</option>
+        <option value="Character">Character</option>
+        <option value="Event">Event</option>
+        <option value="Stage">Stage</option>
+      </select>
+      <select id="ownershipFilter" onchange="resetAndRenderCatalog()">
         <option value="all">All Cards</option>
-        <option value="owned">In My Vault Only</option>
+        <option value="owned">Owned Only</option>
         <option value="missing">Missing Only</option>
       </select>
-      <button class="reset-btn" onclick="resetFilters()">Reset</button>
+      <select id="locationFilter" onchange="resetAndRenderCatalog()">
+        <option value="">All Locations</option>
+      </select>
+      <select id="sortFilter" onchange="resetAndRenderCatalog()">
+        <option value="id">Sort: Card ID</option>
+        <option value="price_desc">Sort: Price (High → Low)</option>
+        <option value="price_asc">Sort: Price (Low → High)</option>
+        <option value="owned_desc">Sort: Quantity Owned</option>
+        <option value="name">Sort: Name (A → Z)</option>
+      </select>
     </div>
 
-    <div class="results-bar">
-      <span id="results-count">Loading cards...</span>
-    </div>
-
-    <div class="grid" id="card-grid"></div>
-  </div>
-
-  <!-- DECKS VIEW -->
-  <div id="view-decks" class="deck-container">
-    <div class="deck-sidebar">
-      <div style="display: flex; justify-content: space-between; align-items: center;">
-        <h3 style="color: #38bdf8;">Your Decks</h3>
-        <button class="btn-primary" style="padding: 6px 12px; font-size: 0.8rem;" onclick="createNewDeck()">+ New Deck</button>
+    <div class="container">
+      <div id="cardGrid" class="card-grid"></div>
+      <div style="text-align:center; margin-top:24px;">
+        <button id="loadMoreBtn" class="btn btn-primary hidden" onclick="loadMoreCards()">Load More Cards</button>
       </div>
-      <div id="deck-list-container" style="display: flex; flex-direction: column; gap: 8px; max-height: 500px; overflow-y: auto;"></div>
-    </div>
-    <div class="deck-workspace" id="deck-workspace-area">
-      <p style="color: #94a3b8; text-align: center; padding: 40px;">Select a deck from the sidebar or create a new one to begin building.</p>
     </div>
   </div>
 
-  <!-- CARD DETAIL MODAL (Binder Notes & Condition) -->
-  <div class="modal-overlay" id="card-modal">
-    <div class="modal">
-      <h2 id="modal-card-title">Card Details</h2>
-      <div style="display: flex; gap: 16px;">
-        <div style="width: 130px; aspect-ratio: 63/88; background: #0f172a; border-radius: 6px; overflow: hidden; display: flex; align-items: center; justify-content: center;">
-          <img id="modal-card-img" src="" alt="" style="width: 100%; height: 100%; object-fit: contain;" />
-        </div>
-        <div style="flex: 1; display: flex; flex-direction: column; gap: 10px;">
-          <label>Quantity Owned:
-            <input type="number" id="modal-qty" min="0" />
+  <!-- TAB 2: COMPETITIVE DECK BUILDER -->
+  <div id="decksView" class="container hidden">
+    <!-- Top Deck Controls -->
+    <div class="panel-box" style="margin-bottom: 18px; display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between;">
+      <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center;">
+        <label style="font-weight:700; font-size:0.9rem;">Saved Decks:</label>
+        <select id="savedDecksSelect" onchange="loadSelectedDeck(this.value)" style="min-width:220px;">
+          <option value="">-- Create New Deck --</option>
+        </select>
+        <button class="btn" onclick="startNewDeck()">+ New Blank Deck</button>
+        <button class="btn btn-red" id="deleteDeckBtn" onclick="deleteCurrentDeck()" style="display:none;">🗑 Delete Deck</button>
+      </div>
+
+      <div style="display:flex; flex-wrap:wrap; gap:8px;">
+        <button class="btn" onclick="exportDeckCSV('all')">📊 Export Full Deck (.CSV)</button>
+        <button class="btn" onclick="exportDeckCSV('missing')">🛒 Export Missing Cards (.CSV)</button>
+        <button class="btn" onclick="exportDeckCSV('owned')">📁 Export Owned Pull-List (.CSV)</button>
+      </div>
+    </div>
+
+    <div class="deck-workspace">
+      <!-- LEFT: VISUAL CARD PICKER -->
+      <div class="panel-box">
+        <h3 style="margin-bottom:10px; color:var(--accent);">1. Pick Cards to Add to Deck</h3>
+        <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
+          <input type="text" id="deckSearchInput" placeholder="Search cards to add..." oninput="renderDeckPicker()" style="flex:1; min-width:160px;" />
+          <select id="deckPickerSet" onchange="renderDeckPicker()">
+            <option value="">All Sets</option>
+          </select>
+          <select id="deckPickerType" onchange="renderDeckPicker()">
+            <option value="">All Non-Leaders</option>
+            <option value="Character">Characters</option>
+            <option value="Event">Events</option>
+            <option value="Stage">Stages</option>
+          </select>
+          <label style="display:flex; align-items:center; gap:5px; font-size:0.82rem; cursor:pointer;">
+            <input type="checkbox" id="matchLeaderColorChk" checked onchange="renderDeckPicker()" />
+            Match Leader Color
           </label>
-          <label>Condition:
-            <select id="modal-condition">
-              <option value="NM">Near Mint (NM)</option>
-              <option value="LP">Lightly Played (LP)</option>
-              <option value="MP">Moderately Played (MP)</option>
-              <option value="Graded">Graded / Slab</option>
+        </div>
+        <div id="deckPickerGrid" class="picker-list"></div>
+      </div>
+
+      <!-- RIGHT: ACTIVE DECK EDITOR -->
+      <div class="panel-box">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <h3 style="color:var(--accent);">2. Active Decklist (<span id="deckTotalCount">0</span> / 50 Cards)</h3>
+          <button class="btn btn-green" onclick="saveCurrentDeck()">💾 Save Deck</button>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px;">
+          <div>
+            <label style="font-size:0.78rem; color:var(--muted); display:block; margin-bottom:4px;">Deck Name</label>
+            <input type="text" id="deckNameInput" placeholder="e.g., Red/Green Luffy Rush" style="width:100%;" />
+          </div>
+          <div>
+            <label style="font-size:0.78rem; color:var(--muted); display:block; margin-bottom:4px;">Leader Card</label>
+            <select id="deckLeaderSelect" onchange="onLeaderChanged()" style="width:100%;">
+              <option value="">-- Select a Leader --</option>
             </select>
-          </label>
+          </div>
         </div>
+
+        <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
+          <button class="btn btn-primary" onclick="suggestMetaDeck()">⚡ Auto-Build 50-Card Synergy Curve</button>
+          <button class="btn" onclick="togglePasteImportBox()">📋 Paste Online Decklist</button>
+        </div>
+
+        <!-- Paste Decklist Box -->
+        <div id="pasteImportBox" class="hidden" style="background:var(--bg); padding:10px; border:1px solid var(--border); border-radius:8px; margin-bottom:12px;">
+          <div style="font-size:0.8rem; color:var(--muted); margin-bottom:6px;">
+            Paste a decklist (e.g., <code>4 OP01-006</code> or <code>4x OP01-016 Nami</code>, one per line):
+          </div>
+          <textarea id="pasteDeckTextarea" rows="5" style="width:100%; margin-bottom:8px;" placeholder="1 OP01-001&#10;4 OP01-016&#10;4 OP01-025"></textarea>
+          <button class="btn btn-green" onclick="importPastedDecklist()">Import Cards into Deck</button>
+        </div>
+
+        <div style="margin-bottom:10px;">
+          <label style="font-size:0.78rem; color:var(--muted); display:block; margin-bottom:4px;">Deck Strategy & Notes</label>
+          <input type="text" id="deckNotesInput" placeholder="Optional notes or tournament matchup reminders..." style="width:100%;" />
+        </div>
+
+        <div style="display:flex; justify-content:space-between; font-size:0.82rem; color:var(--muted); padding:8px 0; border-top:1px solid var(--border); border-bottom:1px solid var(--border); margin-bottom:10px;">
+          <span>Est. Deck Value: <strong id="deckTotalValue" style="color:var(--green-bright);">$0.00</strong></span>
+          <span>Missing Value to Buy: <strong id="deckMissingValue" style="color:var(--accent);">$0.00</strong></span>
+        </div>
+
+        <div id="activeDeckCardsList" style="max-height:420px; overflow-y:auto;"></div>
       </div>
-      <label>Storage Location & Binder Notes:
-        <input type="text" id="modal-notes" placeholder="e.g. Binder 1, Zoro Deck, Bulk Box..." />
-      </label>
-      <div class="modal-btns">
-        <button class="btn-secondary" onclick="closeModal()">Cancel</button>
-        <button class="btn-primary" onclick="saveModalChanges()">Save Changes</button>
+    </div>
+  </div>
+
+  <!-- CARD DETAIL & PER-COPY LOCATION MODAL -->
+  <div id="cardModal" class="modal-backdrop" onclick="if(event.target===this) closeCardModal()">
+    <div class="modal-content">
+      <button class="modal-close" onclick="closeCardModal()">&times;</button>
+      <div class="modal-grid">
+        <div>
+          <img id="modalCardImg" class="modal-img" src="" alt="Card" />
+          <div style="margin-top:12px; display:flex; justify-content:space-between; align-items:center; background:var(--bg); padding:10px 12px; border-radius:8px; border:1px solid var(--border);">
+            <span style="color:var(--muted); font-size:0.82rem;">TCGplayer Market</span>
+            <strong id="modalCardPrice" style="color:var(--green-bright); font-size:1.2rem;">$0.00</strong>
+          </div>
+        </div>
+
+        <div>
+          <div id="modalCardSet" style="font-size:0.82rem; color:var(--accent); font-weight:700;"></div>
+          <h2 id="modalCardName" style="margin:4px 0 10px 0; font-size:1.4rem;"></h2>
+
+          <!-- RESTORED READABLE CARD ATTRIBUTES GRID -->
+          <div class="attr-grid">
+            <div class="attr-box"><span>Card ID</span><strong id="attrId">-</strong></div>
+            <div class="attr-box"><span>Rarity</span><strong id="attrRarity">-</strong></div>
+            <div class="attr-box"><span>Type</span><strong id="attrType">-</strong></div>
+            <div class="attr-box"><span>Color</span><strong id="attrColor">-</strong></div>
+            <div class="attr-box"><span>Cost / Life</span><strong id="attrCost">-</strong></div>
+            <div class="attr-box"><span>Power</span><strong id="attrPower">-</strong></div>
+            <div class="attr-box"><span>Counter</span><strong id="attrCounter">-</strong></div>
+            <div class="attr-box"><span>Attribute</span><strong id="attrAttribute">-</strong></div>
+          </div>
+
+          <div class="attr-box" style="margin-bottom:10px;">
+            <span>Subtypes / Traits</span>
+            <strong id="attrSubtypes">-</strong>
+          </div>
+
+          <div style="font-size:0.75rem; color:var(--muted); text-transform:uppercase; margin-bottom:4px;">Card Effect / Text</div>
+          <div id="attrEffect" class="effect-box">No effect text.</div>
+
+          <!-- PER-COPY LOCATION MANAGER -->
+          <div class="copies-section">
+            <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:10px; margin-bottom:12px;">
+              <h3 style="font-size:1rem; color:var(--accent);">
+                Individual Copies in <span id="modalOwnerLabel"></span> (<span id="modalOwnedCount">0</span>)
+              </h3>
+              <button class="btn btn-green" onclick="adjustCardQty(activeModalCardId, 1)">+ Add Copy</button>
+            </div>
+
+            <!-- Add Custom Location to Dropdown Bar -->
+            <div style="display:flex; gap:8px; margin-bottom:12px;">
+              <input type="text" id="newLocationInput" placeholder="Add new location to dropdown (e.g., Red Folder, Robin Deck)..." style="flex:1;" />
+              <button class="btn btn-primary" onclick="addNewLocation()">+ Add Location</button>
+            </div>
+
+            <div id="modalCopiesList"></div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 
   <script>
+    let activeOwner = localStorage.getItem('l3_active_owner') || "Larry's Collection";
     let allCards = [];
-    let allDecks = [];
+    let cardMap = new Map();
+    let ownerLocations = ['Unassigned'];
+    let filteredCards = [];
+    let displayLimit = 60;
     let activeModalCardId = null;
-    let activeDeckId = null;
 
-    async function loadData() {
-      const resCards = await fetch('/api/cards');
-      const dataCards = await resCards.json();
-      allCards = Array.isArray(dataCards) ? dataCards : (dataCards.cards || []);
-      if (dataCards.lastSync) document.getElementById('last-sync').textContent = dataCards.lastSync;
+    // Deck Builder State
+    let savedDecks = [];
+    let currentDeckId = null;
+    let currentDeckCards = []; // [{ card_id, quantity }]
 
-      const resDecks = await fetch('/api/decks');
-      allDecks = await resDecks.json();
+    const PLACEHOLDER_IMG = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='250' height='350'%3E%3Crect width='100%25' height='100%25' fill='%23161b22'/%3E%3Ctext x='50%25' y='50%25' fill='%238b949e' font-family='sans-serif' font-size='14' text-anchor='middle'%3ENo Card Image%3C/text%3E%3C/svg%3E";
 
-      populateDropdowns();
-      renderCards();
-      renderDecksList();
+    window.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('vaultOwnerSelect').value = activeOwner;
+      document.getElementById('statActiveOwner').textContent = activeOwner;
+      loadVaultData();
+    });
+
+    async function switchVaultOwner(newOwner) {
+      activeOwner = newOwner;
+      localStorage.setItem('l3_active_owner', activeOwner);
+      document.getElementById('statActiveOwner').textContent = activeOwner;
+      startNewDeck();
+      await loadVaultData();
     }
 
     function switchTab(tab) {
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      if (tab === 'vault') {
-        document.querySelector('.nav-tabs button:nth-child(1)').classList.add('active');
-        document.getElementById('view-vault').style.display = 'block';
-        document.getElementById('view-decks').style.display = 'none';
-      } else {
-        document.querySelector('.nav-tabs button:nth-child(2)').classList.add('active');
-        document.getElementById('view-vault').style.display = 'none';
-        document.getElementById('view-decks').style.display = 'grid';
-        if (!activeDeckId && allDecks.length > 0) selectDeck(allDecks[0].deck_id);
+      const isCatalog = tab === 'catalog';
+      document.getElementById('catalogView').classList.toggle('hidden', !isCatalog);
+      document.getElementById('decksView').classList.toggle('hidden', isCatalog);
+      document.getElementById('tabCatalogBtn').classList.toggle('active', isCatalog);
+      document.getElementById('tabDecksBtn').classList.toggle('active', !isCatalog);
+      if (!isCatalog) {
+        renderDeckPicker();
+        renderActiveDeckList();
       }
     }
 
-    async function syncPrices() {
-      const btn = document.querySelector('.sync-btn');
-      btn.disabled = true; btn.textContent = 'Syncing...';
-      try {
-        const res = await fetch('/api/sync-prices', { method: 'POST' });
-        const result = await res.json();
-        if (result.success) {
-          await loadData();
-          btn.textContent = '✓ Updated!';
-          setTimeout(() => { btn.textContent = '↻ Update Prices'; btn.disabled = false; }, 2000);
-        } else { alert('Sync failed'); btn.disabled = false; btn.textContent = '↻ Update Prices'; }
-      } catch (err) { alert('Error: ' + err.message); btn.disabled = false; btn.textContent = '↻ Update Prices'; }
+    async function loadVaultData() {
+      const res = await fetch(`/api/cards?owner=${encodeURIComponent(activeOwner)}`);
+      const data = await res.json();
+      allCards = data.cards || [];
+      ownerLocations = data.locations || ['Unassigned'];
+      cardMap.clear();
+      allCards.forEach(c => cardMap.set(c.card_id, c));
+
+      document.getElementById('syncStatusText').textContent = `Last Sync: ${data.lastSync || 'Ready'}`;
+
+      populateDropdownFilters();
+      updateCollectionStats();
+      resetAndRenderCatalog();
+      await loadSavedDecks();
+
+      if (activeModalCardId && cardMap.has(activeModalCardId)) {
+        openCardModal(activeModalCardId);
+      }
     }
 
-    function populateDropdowns() {
-      const setSelect = document.getElementById('set-filter');
-      const sets = [...new Set(allCards.map(c => c.set_name).filter(Boolean))].sort();
-      setSelect.innerHTML = '<option value="">All Sets</option>' + sets.map(s => `<option value="${s}">${s}</option>`).join('');
+    function populateDropdownFilters() {
+      const sets = [...new Set(allCards.map(c => c.set_code).filter(Boolean))].sort();
+      const setSelect = document.getElementById('setFilter');
+      const deckSetSelect = document.getElementById('deckPickerSet');
+      const currentSet = setSelect.value;
 
-      const typeSelect = document.getElementById('type-filter');
-      const types = [...new Set(allCards.map(c => c.card_type).filter(Boolean))].sort();
-      typeSelect.innerHTML = '<option value="">All Types</option>' + types.map(t => `<option value="${t}">${t}</option>`).join('');
+      setSelect.innerHTML = `<option value="">All Sets (${sets.length})</option>` +
+        sets.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
+      setSelect.value = currentSet;
 
-      const raritySelect = document.getElementById('rarity-filter');
-      const rarities = [...new Set(allCards.map(c => c.rarity).filter(Boolean))].sort();
-      raritySelect.innerHTML = '<option value="">All Rarities</option>' + rarities.map(r => `<option value="${r}">${r}</option>`).join('');
+      deckSetSelect.innerHTML = `<option value="">All Sets</option>` +
+        sets.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
+
+      // Locations filter
+      const locSelect = document.getElementById('locationFilter');
+      const currentLoc = locSelect.value;
+      locSelect.innerHTML = `<option value="">All Locations</option>` +
+        ownerLocations.map(l => `<option value="${escapeHtml(l)}">📁 ${escapeHtml(l)}</option>`).join('');
+      locSelect.value = currentLoc;
+
+      // Leaders dropdown in Deck Builder
+      const leaders = allCards.filter(c => c.card_type === 'Leader');
+      const leaderSelect = document.getElementById('deckLeaderSelect');
+      const currentLeader = leaderSelect.value;
+      leaderSelect.innerHTML = `<option value="">-- Select a Leader (${leaders.length}) --</option>` +
+        leaders.map(l => `<option value="${escapeHtml(l.card_id)}">${escapeHtml(l.card_id)} - ${escapeHtml(l.name)} (${escapeHtml(l.color || '')})</option>`).join('');
+      leaderSelect.value = currentLeader;
     }
 
-    function resetFilters() {
-      document.getElementById('search').value = '';
-      document.getElementById('sort-by').value = 'id-asc';
-      document.getElementById('set-filter').value = '';
-      document.getElementById('color-filter').value = '';
-      document.getElementById('type-filter').value = '';
-      document.getElementById('rarity-filter').value = '';
-      document.getElementById('ownership-filter').value = 'all';
-      renderCards();
-    }
+    function updateCollectionStats() {
+      let totalOwned = 0;
+      let uniqueOwned = 0;
+      let totalVal = 0;
 
-    async function updateQtyDirect(card_id, newQty) {
-      if (newQty < 0) newQty = 0;
-      const card = allCards.find(c => c.card_id === card_id);
-      await fetch('/api/collection', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ card_id, quantity: newQty, condition: card?.condition || 'NM', notes: card?.notes || '' })
-      });
-      if (card) card.owned_qty = newQty;
-      renderCards();
-    }
-
-    async function handleQuickAdd(event) {
-      if (event.key === 'Enter') {
-        const input = document.getElementById('quick-add-input');
-        const val = input.value.trim().toUpperCase();
-        const card = allCards.find(c => c.card_id.toUpperCase() === val || c.card_id.toUpperCase().startsWith(val));
-        if (card) {
-          const newQty = (card.owned_qty || 0) + 1;
-          await updateQtyDirect(card.card_id, newQty);
-          input.value = '';
-          input.placeholder = `✓ Added ${card.card_id} (${card.name})!`;
-          setTimeout(() => { input.placeholder = 'Type ID (e.g. OP01-001) & press Enter...'; }, 2000);
-        } else {
-          alert('Card ID not found in database: ' + val);
+      for (const c of allCards) {
+        const qty = c.owned_qty || 0;
+        if (qty > 0) {
+          totalOwned += qty;
+          uniqueOwned += 1;
+          totalVal += qty * (Number(c.market_price) || 0);
         }
       }
+
+      document.getElementById('statTotalOwned').textContent = totalOwned.toLocaleString();
+      document.getElementById('statUniqueOwned').textContent = uniqueOwned.toLocaleString();
+      document.getElementById('statTotalValue').textContent = `$${totalVal.toFixed(2)}`;
     }
 
-    function openCardModal(card_id) {
-      const card = allCards.find(c => c.card_id === card_id);
-      if (!card) return;
-      activeModalCardId = card_id;
-      document.getElementById('modal-card-title').textContent = `${card.card_id} - ${card.name}`;
-      document.getElementById('modal-card-img').src = card.image_url || '';
-      document.getElementById('modal-qty').value = card.owned_qty || 0;
-      document.getElementById('modal-condition').value = card.condition || 'NM';
-      document.getElementById('modal-notes').value = card.notes || '';
-      document.getElementById('card-modal').style.display = 'flex';
+    function resetAndRenderCatalog() {
+      displayLimit = 60;
+      applyFiltersAndRender();
     }
 
-    function closeModal() {
-      document.getElementById('card-modal').style.display = 'none';
-      activeModalCardId = null;
+    function loadMoreCards() {
+      displayLimit += 60;
+      renderCatalogSlice();
     }
 
-    async function saveModalChanges() {
-      if (!activeModalCardId) return;
-      const qty = parseInt(document.getElementById('modal-qty').value, 10) || 0;
-      const condition = document.getElementById('modal-condition').value;
-      const notes = document.getElementById('modal-notes').value;
+    function applyFiltersAndRender() {
+      const q = document.getElementById('searchInput').value.trim().toLowerCase();
+      const setCode = document.getElementById('setFilter').value;
+      const color = document.getElementById('colorFilter').value;
+      const type = document.getElementById('typeFilter').value;
+      const own = document.getElementById('ownershipFilter').value;
+      const loc = document.getElementById('locationFilter').value;
+      const sort = document.getElementById('sortFilter').value;
 
-      await fetch('/api/collection', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ card_id: activeModalCardId, quantity: qty, condition, notes })
+      filteredCards = allCards.filter(c => {
+        if (setCode && c.set_code !== setCode) return false;
+        if (color && !(c.color || '').includes(color)) return false;
+        if (type && c.card_type !== type) return false;
+        if (own === 'owned' && (!c.owned_qty || c.owned_qty <= 0)) return false;
+        if (own === 'missing' && c.owned_qty > 0) return false;
+        if (loc && !(c.copies || []).some(cp => cp.location === loc)) return false;
+
+        if (q) {
+          const hay = `${c.card_id} ${c.name} ${c.subtypes || ''} ${c.effect || ''} ${c.set_name || ''}`.toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
+        return true;
       });
 
-      const card = allCards.find(c => c.card_id === activeModalCardId);
-      if (card) {
-        card.owned_qty = qty;
-        card.condition = condition;
-        card.notes = notes;
+      filteredCards.sort((a, b) => {
+        if (sort === 'price_desc') return (b.market_price || 0) - (a.market_price || 0);
+        if (sort === 'price_asc') return (a.market_price || 0) - (b.market_price || 0);
+        if (sort === 'owned_desc') return (b.owned_qty || 0) - (a.owned_qty || 0);
+        if (sort === 'name') return (a.name || '').localeCompare(b.name || '');
+        return (a.card_id || '').localeCompare(b.card_id || '');
+      });
+
+      renderCatalogSlice();
+    }
+
+    function renderCatalogSlice() {
+      const grid = document.getElementById('cardGrid');
+      const slice = filteredCards.slice(0, displayLimit);
+
+      if (slice.length === 0) {
+        grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:40px; color:var(--muted);">No matching cards found. If the catalog is empty, click "Sync New Sets & Prices" above.</div>`;
+        document.getElementById('loadMoreBtn').classList.add('hidden');
+        return;
       }
-      closeModal();
-      renderCards();
+
+      grid.innerHTML = slice.map(c => renderCardTileHtml(c)).join('');
+      document.getElementById('loadMoreBtn').classList.toggle('hidden', filteredCards.length <= displayLimit);
     }
 
-    function renderCards() {
-      const search = document.getElementById('search').value.toLowerCase();
-      const sortBy = document.getElementById('sort-by').value;
-      const setFilter = document.getElementById('set-filter').value;
-      const color = document.getElementById('color-filter').value;
-      const cardType = document.getElementById('type-filter').value;
-      const rarity = document.getElementById('rarity-filter').value;
-      const ownership = document.getElementById('ownership-filter').value;
+    function renderCardTileHtml(c) {
+      const qty = c.owned_qty || 0;
+      const price = Number(c.market_price || 0).toFixed(2);
+      const img = c.image_url || PLACEHOLDER_IMG;
 
-      document.getElementById('total-db').textContent = allCards.length;
-      document.getElementById('unique-owned').textContent = allCards.filter(c => c.owned_qty > 0).length;
-      document.getElementById('total-owned').textContent = allCards.reduce((sum, c) => sum + (c.owned_qty || 0), 0);
-      document.getElementById('vault-value').textContent = '$' + allCards.reduce((sum, c) => sum + ((c.owned_qty || 0) * (c.market_price || 0)), 0).toFixed(2);
+      // Summarize locations for this card's copies
+      const locCounts = {};
+      for (const cp of (c.copies || [])) {
+        const l = cp.location || 'Unassigned';
+        locCounts[l] = (locCounts[l] || 0) + 1;
+      }
+      const locBadges = Object.entries(locCounts)
+        .map(([l, count]) => `<span class="loc-pill">${escapeHtml(l)}: ${count}</span>`)
+        .join('');
 
-      const filtered = allCards.filter(c => {
-        const matchesSearch = c.name.toLowerCase().includes(search) || c.card_id.toLowerCase().includes(search) || (c.subtypes && c.subtypes.toLowerCase().includes(search));
-        const matchesSet = !setFilter || c.set_name === setFilter;
-        const matchesColor = !color || (c.color && c.color.includes(color));
-        const matchesType = !cardType || c.card_type === cardType;
-        const matchesRarity = !rarity || c.rarity === rarity;
-        const matchesOwn = ownership === 'all' || (ownership === 'owned' && c.owned_qty > 0) || (ownership === 'missing' && c.owned_qty === 0);
-        return matchesSearch && matchesSet && matchesColor && matchesType && matchesRarity && matchesOwn;
-      });
+      const safeId = escapeJsStr(c.card_id);
 
-      filtered.sort((a, b) => {
-        if (sortBy === 'price-desc') return (b.market_price || 0) - (a.market_price || 0);
-        if (sortBy === 'price-asc') return (a.market_price || 0) - (b.market_price || 0);
-        if (sortBy === 'qty-desc') return (b.owned_qty || 0) - (a.owned_qty || 0);
-        if (sortBy === 'name-asc') return a.name.localeCompare(b.name);
-        if (sortBy === 'power-desc') return (b.power || -1) - (a.power || -1);
-        if (sortBy === 'id-desc') return b.card_id.localeCompare(a.card_id, undefined, { numeric: true });
-        return a.card_id.localeCompare(b.card_id, undefined, { numeric: true });
-      });
-
-      const visible = filtered.slice(0, 200);
-      document.getElementById('results-count').textContent = `Showing ${visible.length} of ${filtered.length} matching cards`;
-
-      document.getElementById('card-grid').innerHTML = visible.map(c => `
-        <div class="card">
-          <div>
-            <div class="card-img-wrap" onclick="openCardModal('${c.card_id}')">
-              ${c.image_url ? `<img src="${c.image_url}" alt="${c.name}" referrerpolicy="no-referrer" loading="lazy" />` : '<span style="color:#64748b;">No Image</span>'}
-            </div>
-            <div class="card-header">
-              <span class="card-id">${c.card_id} ${c.rarity ? '• ' + c.rarity : ''}</span>
-              <span class="price-tag">$${(c.market_price || 0).toFixed(2)}</span>
-            </div>
-            <div class="card-name" onclick="openCardModal('${c.card_id}')">${c.name}</div>
-            <div class="card-set">${c.set_name || ''}</div>
-            ${c.notes ? `<span class="location-badge">📍 ${c.notes} (${c.condition || 'NM'})</span>` : ''}
+      return `
+        <div class="card-tile ${qty > 0 ? 'owned' : ''}" id="tile-${escapeHtml(c.card_id)}">
+          <div class="card-img-wrap" onclick="openCardModal('${safeId}')">
+            <img src="${escapeHtml(img)}" loading="lazy" alt="${escapeHtml(c.name)}" onerror="this.src='${PLACEHOLDER_IMG}'" />
+            <span class="rarity-badge">${escapeHtml(c.rarity || 'OP')}</span>
+            <span class="price-badge">$${price}</span>
           </div>
-          <div class="collection-bar">
-            <span>In Vault:</span>
-            <div class="qty-controls">
-              <button class="qty-btn" onclick="updateQtyDirect('${c.card_id}', ${c.owned_qty - 1})">-</button>
-              <input type="number" class="qty-input" value="${c.owned_qty}" onchange="updateQtyDirect('${c.card_id}', parseInt(this.value) || 0)" />
-              <button class="qty-btn" onclick="updateQtyDirect('${c.card_id}, ${c.owned_qty + 1}')" onclick="updateQtyDirect('${c.card_id}', ${c.owned_qty + 1})">+</button>
+          <div class="card-body">
+            <div class="card-id-line">
+              <span>${escapeHtml(c.card_id)}</span>
+              <span>${escapeHtml(c.color || '')} • ${escapeHtml(c.card_type || '')}</span>
             </div>
-          </div>
-        </div>
-      `).join('');
-    }
-
-    // --- DECK BUILDER LOGIC ---
-    function renderDecksList() {
-      const container = document.getElementById('deck-list-container');
-      container.innerHTML = allDecks.map(d => `
-        <div class="deck-list-item ${d.deck_id === activeDeckId ? 'active' : ''}" onclick="selectDeck(${d.deck_id})">
-          <span>${d.deck_name}</span>
-          <span style="font-size: 0.75rem; color: #94a3b8;">${d.cards.reduce((sum, c) => sum + c.quantity, 0)} cards</span>
-        </div>
-      `).join('');
-    }
-
-    async function createNewDeck() {
-      const deckName = prompt('Enter new deck name:', 'New Competitive Deck');
-      if (!deckName) return;
-      const res = await fetch('/api/decks/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ deck_name: deckName, leader_card_id: 'OP01-001', notes: '', cards: [] })
-      });
-      const data = await res.json();
-      const resDecks = await fetch('/api/decks');
-      allDecks = await resDecks.json();
-      renderDecksList();
-      selectDeck(data.deck_id);
-    }
-
-    function selectDeck(deckId) {
-      activeDeckId = deckId;
-      renderDecksList();
-      const deck = allDecks.find(d => d.deck_id === deckId);
-      if (!deck) return;
-
-      const workspace = document.getElementById('deck-workspace-area');
-      workspace.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-          <h2>${deck.deck_name}</h2>
-          <div style="display: flex; gap: 10px;">
-            <select id="meta-leader-select" style="background:#0f172a; color:#f8fafc; border:1px solid #334155; padding:6px; border-radius:6px;">
-              ${allCards.filter(c => c.card_type === 'Leader').map(l => `<option value="${l.card_id}">${l.card_id} -${l.name}</option>`).join('')}
-            </select>
-            <button class="btn-primary" onclick="suggestMetaDeck()">✨ Suggest Meta Build</button>
-          </div>
-        </div>
-        <p style="color: #94a3b8; font-size: 0.85rem;">${deck.notes || 'No notes.'}</p>
-        <h3 style="color: #38bdf8; font-size: 1.1rem; margin-top: 10px;">Deck Cards (${deck.cards.reduce((sum, c) => sum + c.quantity, 0)})</h3>
-        <div style="display: flex; flex-direction: column; gap: 8px; max-height: 400px; overflow-y: auto;">
-          ${deck.cards.length === 0 ? '<p style="color:#64748b;">No cards in this deck yet. Click "Suggest Meta Build" or add cards.</p>' :
-            deck.cards.map(c => `
-              <div style="display: flex; justify-content: space-between; align-items: center; background: #0f172a; padding: 8px 12px; border-radius: 6px; border: 1px solid #334155;">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                  <span style="color: #38bdf8; font-weight: bold; font-size: 0.85rem;">${c.card_id}</span>
-                  <span>${c.name}</span>
-                </div>
-                <div style="display: flex; align-items: center; gap: 15px; font-size: 0.85rem;">
-                  <span style="color: ${c.owned_qty >= c.quantity ? '#4ade80' : '#ef4444'};">Owned: ${c.owned_qty} /${c.quantity}</span>
-                  <span style="font-weight: bold;">Qty: ${c.quantity}</span>
-                </div>
+            <div class="card-title" onclick="openCardModal('${safeId}')">${escapeHtml(c.name)}</div>
+            <div class="loc-pills" id="locs-${escapeHtml(c.card_id)}">${locBadges}</div>
+            <div class="card-controls">
+              <span style="font-size:0.76rem; color:var(--muted);">Owned:</span>
+              <div class="qty-stepper">
+                <button class="qty-btn" onclick="adjustCardQty('${safeId}', -1)" title="Remove 1 Copy">−</button>
+                <span class="qty-num" id="qty-${escapeHtml(c.card_id)}">${qty}</span>
+                <button class="qty-btn" onclick="adjustCardQty('${safeId}', 1)" title="Add 1 Copy">+</button>
               </div>
-            `).join('')}
+            </div>
+          </div>
         </div>
       `;
     }
 
+    // WORKING + AND - QUANTITY ADJUSTMENT
+    async function adjustCardQty(cardId, delta) {
+      const card = cardMap.get(cardId);
+      if (!card) return;
+      if (delta < 0 && (!card.owned_qty || card.owned_qty <= 0)) return;
+
+      const res = await fetch('/api/collection/adjust', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          owner: activeOwner,
+          card_id: cardId,
+          delta: delta
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        card.owned_qty = data.owned_qty;
+        card.copies = data.copies || [];
+        updateSingleCardTileUI(card);
+        updateCollectionStats();
+        if (activeModalCardId === cardId) {
+          renderModalCopiesList(card);
+        }
+      }
+    }
+
+    function updateSingleCardTileUI(card) {
+      const qtyEl = document.getElementById(`qty-${card.card_id}`);
+      const tileEl = document.getElementById(`tile-${card.card_id}`);
+      const locsEl = document.getElementById(`locs-${card.card_id}`);
+
+      if (qtyEl) qtyEl.textContent = card.owned_qty || 0;
+      if (tileEl) tileEl.classList.toggle('owned', (card.owned_qty || 0) > 0);
+      if (locsEl) {
+        const locCounts = {};
+        for (const cp of (card.copies || [])) {
+          const l = cp.location || 'Unassigned';
+          locCounts[l] = (locCounts[l] || 0) + 1;
+        }
+        locsEl.innerHTML = Object.entries(locCounts)
+          .map(([l, count]) => `<span class="loc-pill">${escapeHtml(l)}: ${count}</span>`)
+          .join('');
+      }
+    }
+
+    // CARD DETAIL & PER-COPY LOCATION MODAL
+    function openCardModal(cardId) {
+      const c = cardMap.get(cardId);
+      if (!c) return;
+      activeModalCardId = cardId;
+
+      document.getElementById('modalCardImg').src = c.image_url || PLACEHOLDER_IMG;
+      document.getElementById('modalCardPrice').textContent = `$${Number(c.market_price || 0).toFixed(2)}`;
+      document.getElementById('modalCardSet').textContent = `${c.set_name || c.set_code || 'One Piece TCG'}`;
+      document.getElementById('modalCardName').textContent = c.name;
+
+      // Restored Readable Card Attributes
+      document.getElementById('attrId').textContent = c.card_id || '-';
+      document.getElementById('attrRarity').textContent = c.rarity || '-';
+      document.getElementById('attrType').textContent = c.card_type || '-';
+      document.getElementById('attrColor').textContent = c.color || '-';
+      document.getElementById('attrCost').textContent = c.cost !== null && c.cost !== undefined ? c.cost : '-';
+      document.getElementById('attrPower').textContent = c.power !== null && c.power !== undefined ? c.power : '-';
+      document.getElementById('attrCounter').textContent = c.counter !== null && c.counter !== undefined ? `+${c.counter}` : '-';
+      document.getElementById('attrAttribute').textContent = c.attribute || '-';
+      document.getElementById('attrSubtypes').textContent = c.subtypes || '-';
+      document.getElementById('attrEffect').textContent = c.effect || 'No card effect text.';
+
+      document.getElementById('modalOwnerLabel').textContent = activeOwner;
+      renderModalCopiesList(c);
+
+      document.getElementById('cardModal').classList.add('open');
+    }
+
+    function closeCardModal() {
+      document.getElementById('cardModal').classList.remove('open');
+      activeModalCardId = null;
+    }
+
+    function renderModalCopiesList(card) {
+      const copies = card.copies || [];
+      document.getElementById('modalOwnedCount').textContent = copies.length;
+      const listEl = document.getElementById('modalCopiesList');
+
+      if (copies.length === 0) {
+        listEl.innerHTML = `<div style="color:var(--muted); font-size:0.88rem; padding:12px; background:var(--bg); border-radius:6px; border:1px solid var(--border);">You have 0 copies of this card in ${escapeHtml(activeOwner)}. Click <strong>"+ Add Copy"</strong> above to add one and assign its location.</div>`;
+        return;
+      }
+
+      const conditions = ['NM', 'LP', 'MP', 'HP', 'Graded 10', 'Graded 9'];
+
+      listEl.innerHTML = copies.map((cp, idx) => {
+        const locOptions = ownerLocations.map(l =>
+          `<option value="${escapeHtml(l)}" ${cp.location === l ? 'selected' : ''}>${escapeHtml(l)}</option>`
+        ).join('');
+
+        const condOptions = conditions.map(cond =>
+          `<option value="${cond}" ${cp.condition === cond ? 'selected' : ''}>${cond}</option>`
+        ).join('');
+
+        return `
+          <div class="copy-row">
+            <strong style="font-size:0.82rem; color:var(--accent);">Copy #${idx + 1}</strong>
+            <select onchange="updateCopyRow(${cp.copy_id}, this.value, null, null)" id="cp-loc-${cp.copy_id}" title="Storage Location">
+              ${locOptions}
+            </select>
+            <select onchange="updateCopyRow(${cp.copy_id}, null, this.value, null)" id="cp-cond-${cp.copy_id}" title="Condition">
+              ${condOptions}
+            </select>
+            <input type="text" value="${escapeHtml(cp.notes || '')}" placeholder="Copy note (e.g., Foil, Page 4)..."
+              onchange="updateCopyRow(${cp.copy_id}, null, null, this.value)" id="cp-note-${cp.copy_id}" />
+            <button class="btn btn-red" style="padding:5px 9px;" onclick="deleteSpecificCopy(${cp.copy_id})" title="Delete this copy">🗑</button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function updateCopyRow(copyId, newLoc, newCond, newNote) {
+      const location = newLoc !== null ? newLoc : document.getElementById(`cp-loc-${copyId}`).value;
+      const condition = newCond !== null ? newCond : document.getElementById(`cp-cond-${copyId}`).value;
+      const notes = newNote !== null ? newNote : document.getElementById(`cp-note-${copyId}`).value;
+
+      const res = await fetch('/api/collection/copy', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ copy_id: copyId, location, condition, notes })
+      });
+      const data = await res.json();
+      if (data.success && activeModalCardId) {
+        const card = cardMap.get(activeModalCardId);
+        if (card) {
+          card.copies = data.copies;
+          card.owned_qty = data.copies.length;
+          updateSingleCardTileUI(card);
+        }
+      }
+    }
+
+    async function deleteSpecificCopy(copyId) {
+      const res = await fetch('/api/collection/copy', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ copy_id: copyId })
+      });
+      const data = await res.json();
+      if (data.success && data.card_id) {
+        const card = cardMap.get(data.card_id);
+        if (card) {
+          card.copies = data.copies || [];
+          card.owned_qty = data.owned_qty;
+          updateSingleCardTileUI(card);
+          updateCollectionStats();
+          renderModalCopiesList(card);
+        }
+      }
+    }
+
+    async function addNewLocation() {
+      const input = document.getElementById('newLocationInput');
+      const name = input.value.trim();
+      if (!name) return;
+
+      const res = await fetch('/api/locations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ owner: activeOwner, name })
+      });
+      const data = await res.json();
+      if (data.success) {
+        ownerLocations = data.locations;
+        input.value = '';
+        populateDropdownFilters();
+        if (activeModalCardId && cardMap.has(activeModalCardId)) {
+          renderModalCopiesList(cardMap.get(activeModalCardId));
+        }
+      }
+    }
+
+    // COMPETITIVE DECK BUILDER FUNCTIONS
+    async function loadSavedDecks() {
+      const res = await fetch(`/api/decks?owner=${encodeURIComponent(activeOwner)}`);
+      savedDecks = await res.json();
+      const sel = document.getElementById('savedDecksSelect');
+      sel.innerHTML = `<option value="">-- Create New Deck (${savedDecks.length} Saved) --</option>` +
+        savedDecks.map(d => `<option value="${d.deck_id}" ${Number(currentDeckId) === Number(d.deck_id) ? 'selected' : ''}>${escapeHtml(d.deck_name)}</option>`).join('');
+    }
+
+    function startNewDeck() {
+      currentDeckId = null;
+      currentDeckCards = [];
+      document.getElementById('savedDecksSelect').value = '';
+      document.getElementById('deckNameInput').value = '';
+      document.getElementById('deckLeaderSelect').value = '';
+      document.getElementById('deckNotesInput').value = '';
+      document.getElementById('deleteDeckBtn').style.display = 'none';
+      renderDeckPicker();
+      renderActiveDeckList();
+    }
+
+    function loadSelectedDeck(deckId) {
+      if (!deckId) return startNewDeck();
+      const deck = savedDecks.find(d => Number(d.deck_id) === Number(deckId));
+      if (!deck) return;
+
+      currentDeckId = deck.deck_id;
+      document.getElementById('deckNameInput').value = deck.deck_name || '';
+      document.getElementById('deckLeaderSelect').value = deck.leader_card_id || '';
+      document.getElementById('deckNotesInput').value = deck.notes || '';
+      document.getElementById('deleteDeckBtn').style.display = 'inline-block';
+
+      currentDeckCards = (deck.cards || []).map(c => ({
+        card_id: c.card_id,
+        quantity: Number(c.quantity) || 1
+      }));
+
+      renderDeckPicker();
+      renderActiveDeckList();
+    }
+
+    function onLeaderChanged() {
+      renderDeckPicker();
+      renderActiveDeckList();
+    }
+
+    function renderDeckPicker() {
+      const q = document.getElementById('deckSearchInput').value.trim().toLowerCase();
+      const setCode = document.getElementById('deckPickerSet').value;
+      const type = document.getElementById('deckPickerType').value;
+      const matchColor = document.getElementById('matchLeaderColorChk').checked;
+      const leaderId = document.getElementById('deckLeaderSelect').value;
+      const leader = cardMap.get(leaderId);
+      const leaderColors = leader && leader.color ? leader.color.split('/').map(s => s.trim()) : [];
+
+      const pool = allCards.filter(c => {
+        if (c.card_type === 'Leader') return false;
+        if (setCode && c.set_code !== setCode) return false;
+        if (type && c.card_type !== type) return false;
+        if (matchColor && leaderColors.length > 0) {
+          const cColors = (c.color || '').split('/').map(s => s.trim());
+          if (!cColors.some(col => leaderColors.includes(col))) return false;
+        }
+        if (q) {
+          const hay = `${c.card_id} ${c.name} ${c.subtypes || ''} ${c.effect || ''}`.toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
+        return true;
+      }).slice(0, 80);
+
+      const grid = document.getElementById('deckPickerGrid');
+      grid.innerHTML = pool.map(c => {
+        const inDeck = currentDeckCards.find(dc => dc.card_id === c.card_id);
+        const deckQty = inDeck ? inDeck.quantity : 0;
+        const safeId = escapeJsStr(c.card_id);
+        return `
+          <div class="picker-card">
+            <img src="${escapeHtml(c.image_url || PLACEHOLDER_IMG)}" loading="lazy" onclick="openCardModal('${safeId}')" onerror="this.src='${PLACEHOLDER_IMG}'" />
+            <div style="font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(c.name)}</div>
+            <div style="color:var(--muted); font-size:0.72rem; display:flex; justify-content:space-between;">
+              <span>${escapeHtml(c.card_id)}</span>
+              <span>Own: ${c.owned_qty || 0}</span>
+            </div>
+            <button class="btn btn-primary" style="width:100%; padding:4px;" onclick="addCardToDeck('${safeId}', 1)">
+              + Add (${deckQty}/4)
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function addCardToDeck(cardId, delta) {
+      const existing = currentDeckCards.find(c => c.card_id === cardId);
+      const totalNow = currentDeckCards.reduce((sum, item) => sum + item.quantity, 0);
+
+      if (delta > 0 && totalNow >= 50) {
+        alert('Main deck is already at 50 cards.');
+        return;
+      }
+
+      if (existing) {
+        existing.quantity = Math.min(4, existing.quantity + delta);
+        if (existing.quantity <= 0) {
+          currentDeckCards = currentDeckCards.filter(c => c.card_id !== cardId);
+        }
+      } else if (delta > 0) {
+        currentDeckCards.push({ card_id: cardId, quantity: Math.min(4, delta) });
+      }
+
+      renderDeckPicker();
+      renderActiveDeckList();
+    }
+
+    function renderActiveDeckList() {
+      const listEl = document.getElementById('activeDeckCardsList');
+      let totalCount = 0;
+      let totalValue = 0;
+      let missingValue = 0;
+
+      if (currentDeckCards.length === 0) {
+        document.getElementById('deckTotalCount').textContent = '0';
+        document.getElementById('deckTotalValue').textContent = '$0.00';
+        document.getElementById('deckMissingValue').textContent = '$0.00';
+        listEl.innerHTML = `<div style="color:var(--muted); padding:20px; text-align:center;">No cards in deck yet. Click cards on the left or click "Auto-Build 50-Card Synergy Curve" above.</div>`;
+        return;
+      }
+
+      listEl.innerHTML = currentDeckCards.map(item => {
+        const card = cardMap.get(item.card_id) || { name: item.card_id, market_price: 0, owned_qty: 0, copies: [] };
+        const qty = item.quantity;
+        const owned = card.owned_qty || 0;
+        const missing = Math.max(0, qty - owned);
+        const price = Number(card.market_price) || 0;
+
+        totalCount += qty;
+        totalValue += qty * price;
+        missingValue += missing * price;
+
+        const locs = [...new Set((card.copies || []).map(cp => cp.location))].join(', ');
+        const statusColor = missing === 0 ? 'var(--green-bright)' : 'var(--accent)';
+        const safeId = escapeJsStr(item.card_id);
+
+        return `
+          <div class="deck-card-row">
+            <div style="flex:1;">
+              <div style="font-weight:700; cursor:pointer;" onclick="openCardModal('${safeId}')">
+                ${qty}x ${escapeHtml(card.name)} <span style="color:var(--muted); font-weight:400;">(${escapeHtml(item.card_id)})</span>
+              </div>
+              <div style="font-size:0.75rem; color:${statusColor};">
+                Owned: ${owned}/${qty} ${missing > 0 ? `• Need ${missing} ($${(missing * price).toFixed(2)})` : `• Ready`}
+                ${locs ? ` • 📁 ${escapeHtml(locs)}` : ''}
+              </div>
+            </div>
+            <div class="qty-stepper">
+              <button class="qty-btn" onclick="addCardToDeck('${safeId}', -1)">−</button>
+              <span class="qty-num">${qty}</span>
+              <button class="qty-btn" onclick="addCardToDeck('${safeId}', 1)">+</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      document.getElementById('deckTotalCount').textContent = totalCount;
+      document.getElementById('deckTotalValue').textContent = `$${totalValue.toFixed(2)}`;
+      document.getElementById('deckMissingValue').textContent = `$${missingValue.toFixed(2)}`;
+    }
+
+    async function saveCurrentDeck() {
+      const deckName = document.getElementById('deckNameInput').value.trim();
+      const leaderId = document.getElementById('deckLeaderSelect').value;
+      const notes = document.getElementById('deckNotesInput').value.trim();
+
+      if (!deckName) {
+        alert('Please enter a Deck Name before saving.');
+        return;
+      }
+
+      const res = await fetch('/api/decks/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          deck_id: currentDeckId,
+          owner: activeOwner,
+          deck_name: deckName,
+          leader_card_id: leaderId,
+          notes,
+          cards: currentDeckCards
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        currentDeckId = data.deck_id;
+        await loadSavedDecks();
+        document.getElementById('savedDecksSelect').value = currentDeckId;
+        document.getElementById('deleteDeckBtn').style.display = 'inline-block';
+        alert(`Saved "${deckName}" to ${activeOwner}!`);
+      } else {
+        alert('Error saving deck: ' + (data.error || 'Unknown error'));
+      }
+    }
+
+    async function deleteCurrentDeck() {
+      if (!currentDeckId) return;
+      if (!confirm('Delete this deck from your vault?')) return;
+      await fetch('/api/decks', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ deck_id: currentDeckId })
+      });
+      startNewDeck();
+      await loadSavedDecks();
+    }
+
     async function suggestMetaDeck() {
-      const leaderId = document.getElementById('meta-leader-select').value;
+      const leaderId = document.getElementById('deckLeaderSelect').value;
+      if (!leaderId) {
+        alert('Please select a Leader Card first so we can build around its colors and traits.');
+        return;
+      }
       const res = await fetch('/api/decks/meta-suggest', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ leader_card_id: leaderId })
       });
-      const suggested = await res.json();
-
-      // Save suggestion to active deck
-      await fetch('/api/decks/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          deck_id: activeDeckId,
-          deck_name: suggested.deck_name,
-          leader_card_id: suggested.leader_card_id,
-          notes: suggested.notes,
-          cards: suggested.cards
-        })
-      });
-
-      const resDecks = await fetch('/api/decks');
-      allDecks = await resDecks.json();
-      renderDecksList();
-      selectDeck(activeDeckId);
+      const data = await res.json();
+      if (data.cards) {
+        if (!document.getElementById('deckNameInput').value) {
+          document.getElementById('deckNameInput').value = data.deck_name;
+        }
+        document.getElementById('deckNotesInput').value = data.notes || '';
+        currentDeckCards = data.cards;
+        renderDeckPicker();
+        renderActiveDeckList();
+      }
     }
 
-    document.getElementById('search').addEventListener('input', renderCards);
-    document.getElementById('sort-by').addEventListener('change', renderCards);
-    document.getElementById('set-filter').addEventListener('change', renderCards);
-    document.getElementById('color-filter').addEventListener('change', renderCards);
-    document.getElementById('type-filter').addEventListener('change', renderCards);
-    document.getElementById('rarity-filter').addEventListener('change', renderCards);
-    document.getElementById('ownership-filter').addEventListener('change', renderCards);
+    function togglePasteImportBox() {
+      document.getElementById('pasteImportBox').classList.toggle('hidden');
+    }
 
-    loadData();
+    function importPastedDecklist() {
+      const raw = document.getElementById('pasteDeckTextarea').value;
+      const lines = raw.split(/\r?\n/);
+      const imported = [];
+
+      for (const line of lines) {
+        const match = line.match(/(\d+)\s*x?\s*([A-Z]{2,4}\d{2}-\d{3})/i);
+        if (match) {
+          const qty = Math.min(4, parseInt(match[1], 10) || 1);
+          const cid = match[2].toUpperCase();
+          const card = cardMap.get(cid);
+          if (card && card.card_type === 'Leader') {
+            document.getElementById('deckLeaderSelect').value = cid;
+          } else {
+            imported.push({ card_id: cid, quantity: qty });
+          }
+        }
+      }
+
+      if (imported.length === 0) {
+        alert('Could not find valid One Piece card IDs (e.g., 4 OP01-016).');
+        return;
+      }
+      currentDeckCards = imported;
+      document.getElementById('pasteImportBox').classList.add('hidden');
+      renderDeckPicker();
+      renderActiveDeckList();
+    }
+
+    // 3 SPREADSHEET CSV EXPORT MODES (ALL, MISSING ONLY, OWNED WITH LOCATIONS)
+    function exportDeckCSV(mode) {
+      if (currentDeckCards.length === 0) {
+        alert('Add cards to your deck first before exporting.');
+        return;
+      }
+
+      const deckName = (document.getElementById('deckNameInput').value.trim() || 'One_Piece_Deck').replace(/[^a-zA-Z0-9_-]/g, '_');
+      const rows = [
+        ['Card ID', 'Card Name', 'Type', 'Color', 'Deck Qty', 'Owned Qty', 'Missing Qty', 'Unit Price ($)', 'Total Line Cost ($)', 'Storage Locations']
+      ];
+
+      for (const item of currentDeckCards) {
+        const c = cardMap.get(item.card_id) || { name: item.card_id, card_type: '', color: '', market_price: 0, owned_qty: 0, copies: [] };
+        const deckQty = item.quantity;
+        const ownedQty = Math.min(deckQty, c.owned_qty || 0);
+        const missingQty = Math.max(0, deckQty - ownedQty);
+        const unitPrice = Number(c.market_price || 0);
+        const locs = (c.copies || []).map(cp => cp.location).join(' | ') || 'None';
+
+        if (mode === 'missing' && missingQty <= 0) continue;
+        if (mode === 'owned' && ownedQty <= 0) continue;
+
+        const targetQty = mode === 'missing' ? missingQty : (mode === 'owned' ? ownedQty : deckQty);
+        rows.push([
+          item.card_id,
+          `"${(c.name || '').replace(/"/g, '""')}"`,
+          c.card_type || '',
+          c.color || '',
+          deckQty,
+          ownedQty,
+          missingQty,
+          unitPrice.toFixed(2),
+          (targetQty * unitPrice).toFixed(2),
+          `"${locs.replace(/"/g, '""')}"`
+        ]);
+      }
+
+      const csvContent = rows.map(r => r.join(',')).join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${deckName}_${mode.toUpperCase()}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // PRICE SYNC & BACKUP / RESTORE
+    async function triggerPriceSync() {
+      const btn = document.getElementById('syncBtn');
+      btn.disabled = true;
+      btn.textContent = '⏳ Syncing TCGplayer...';
+      try {
+        const res = await fetch('/api/sync-prices', { method: 'POST' });
+        const data = await res.json();
+        await loadVaultData();
+        alert(`Sync Complete! Updated ${data.updatedCount || 0} One Piece cards.`);
+      } catch (e) {
+        alert('Sync error: ' + e.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '🔄 Sync New Sets & Prices';
+      }
+    }
+
+    async function downloadBackup() {
+      const res = await fetch('/api/backup');
+      const data = await res.json();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `L3-Vault-Backup-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    async function restoreBackupFile(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const text = await file.text();
+      const payload = JSON.parse(text);
+      const res = await fetch('/api/restore', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.success) {
+        await loadVaultData();
+        alert('Vault Backup Restored Successfully!');
+      } else {
+        alert('Restore failed: ' + (data.error || 'Unknown error'));
+      }
+    }
+
+    function escapeHtml(str) {
+      return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function escapeJsStr(str) {
+      return String(str ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    }
   </script>
 </body>
 </html>
