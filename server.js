@@ -311,6 +311,6 @@ const server = http.createServer(async (req, res) => {
   res.end('Not Found');
 });
 
-server.listen(PORT, () => {
-  console.log(`L3-Vault Server running at http://localhost:${PORT}`);
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`L3-Vault Server running at http://0.0.0.0:${PORT}`);
 });
