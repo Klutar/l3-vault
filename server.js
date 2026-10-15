@@ -3,58 +3,66 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { DatabaseSync } = require('node:sqlite');
 
-const db = new DatabaseSync('l3_vault.db');
-const PORT = 3000;
-const CATEGORY_ID = 68;
+const PORT = process.env.PORT || 10000;
+let db;
 
-// Initialize Tables
-db.exec(`
-  CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
+try {
+  console.log('Initializing SQLite database...');
+  db = new DatabaseSync('l3_vault.db');
 
-  CREATE TABLE IF NOT EXISTS cards (
-    card_id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    set_code TEXT,
-    set_name TEXT,
-    rarity TEXT,
-    color TEXT,
-    card_type TEXT,
-    cost INTEGER,
-    power INTEGER,
-    counter INTEGER,
-    attribute TEXT,
-    subtypes TEXT,
-    effect TEXT,
-    image_url TEXT,
-    market_price REAL DEFAULT 0.0
-  );
+  // Initialize Tables
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
 
-  CREATE TABLE IF NOT EXISTS collection (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    card_id TEXT NOT NULL,
-    variant TEXT DEFAULT 'Regular',
-    quantity INTEGER DEFAULT 1,
-    condition TEXT DEFAULT 'NM',
-    notes TEXT,
-    FOREIGN KEY (card_id) REFERENCES cards(card_id)
-  );
+    CREATE TABLE IF NOT EXISTS cards (
+      card_id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      set_code TEXT,
+      set_name TEXT,
+      rarity TEXT,
+      color TEXT,
+      card_type TEXT,
+      cost INTEGER,
+      power INTEGER,
+      counter INTEGER,
+      attribute TEXT,
+      subtypes TEXT,
+      effect TEXT,
+      image_url TEXT,
+      market_price REAL DEFAULT 0.0
+    );
 
-  CREATE TABLE IF NOT EXISTS decks (
-    deck_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    deck_name TEXT NOT NULL,
-    leader_card_id TEXT,
-    notes TEXT
-  );
+    CREATE TABLE IF NOT EXISTS collection (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      card_id TEXT NOT NULL,
+      variant TEXT DEFAULT 'Regular',
+      quantity INTEGER DEFAULT 1,
+      condition TEXT DEFAULT 'NM',
+      notes TEXT,
+      FOREIGN KEY (card_id) REFERENCES cards(card_id)
+    );
 
-  CREATE TABLE IF NOT EXISTS deck_cards (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    deck_id INTEGER NOT NULL,
-    card_id TEXT NOT NULL,
-    quantity INTEGER DEFAULT 1,
-    FOREIGN KEY (deck_id) REFERENCES decks(deck_id) ON DELETE CASCADE,
-    FOREIGN KEY (card_id) REFERENCES cards(card_id)
-  );
-`);
+    CREATE TABLE IF NOT EXISTS decks (
+      deck_id INTEGER PRIMARY KEY AUTOINCREMENT,
+      deck_name TEXT NOT NULL,
+      leader_card_id TEXT,
+      notes TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS deck_cards (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      deck_id INTEGER NOT NULL,
+      card_id TEXT NOT NULL,
+      quantity INTEGER DEFAULT 1,
+      FOREIGN KEY (deck_id) REFERENCES decks(deck_id) ON DELETE CASCADE,
+      FOREIGN KEY (card_id) REFERENCES cards(card_id)
+    );
+  `);
+  console.log('Database tables verified successfully.');
+} catch (err) {
+  console.error('CRITICAL DB ERROR ON STARTUP:', err);
+  process.exit(1);
+}
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -85,7 +93,7 @@ async function fetchJson(url) {
 }
 
 async function syncAllPricesAndCards() {
-  const groupsData = await fetchJson(`https://tcgcsv.com/tcgplayer/${CATEGORY_ID}/groups`);
+  const groupsData = await fetchJson(`https://tcgcsv.com/tcgplayer/${68}/groups`);
   const targetGroups = (groupsData.results || []).filter(
     g => !g.name.includes('(JP)') && !g.name.includes('Pre-Release')
   );
@@ -104,9 +112,9 @@ async function syncAllPricesAndCards() {
   for (const group of targetGroups) {
     try {
       await sleep(100);
-      const productsData = await fetchJson(`https://tcgcsv.com/tcgplayer/${CATEGORY_ID}/${group.groupId}/products`);
+      const productsData = await fetchJson(`https://tcgcsv.com/tcgplayer/${68}/${group.groupId}/products`);
       await sleep(100);
-      const pricesData = await fetchJson(`https://tcgcsv.com/tcgplayer/${CATEGORY_ID}/${group.groupId}/prices`);
+      const pricesData = await fetchJson(`https://tcgcsv.com/tcgplayer/${68}/${group.groupId}/prices`);
 
       const priceMap = new Map();
       for (const p of pricesData.results || []) {
@@ -125,7 +133,7 @@ async function syncAllPricesAndCards() {
         if (!rawNumber) continue;
 
         let cardId = rawNumber;
-        const variantMatch = prod.name.match(/\((Parallel|Alternate Art|Manga|Box Topper|SP|TR|Foil)\)/i);
+        const variantMatch = prod.name.match(/\((Parallel\vert{}Alternate Art\vert{}Manga\vert{}Box Topper\vert{}SP\vert{}TR\vert{}Foil)\)/i);
         if (variantMatch) cardId = `${rawNumber} (${variantMatch[1]})`;
         if (seenIdsInSet.has(cardId)) cardId = `${rawNumber}-${prod.productId}`;
         seenIdsInSet.add(cardId);
@@ -164,14 +172,12 @@ const server = http.createServer(async (req, res) => {
   const urlObj = new URL(req.url, `http://${req.headers.host}`);
   const pathname = urlObj.pathname;
 
-  // 1. Serve Webpage
   if (req.method === 'GET' && pathname === '/') {
     const htmlPath = path.join(__dirname, 'index.html');
     res.writeHead(200, { 'Content-Type': 'text/html' });
     return res.end(fs.readFileSync(htmlPath, 'utf8'));
   }
 
-  // 2. API: Get all cards + collection details
   if (req.method === 'GET' && pathname === '/api/cards') {
     const query = `
       SELECT 
@@ -189,7 +195,6 @@ const server = http.createServer(async (req, res) => {
     return res.end(JSON.stringify({ cards, lastSync: syncRow ? syncRow.value : 'Initial Seed' }));
   }
 
-  // 3. API: Update collection (Quantity, Condition, Notes)
   if (req.method === 'POST' && pathname === '/api/collection') {
     let body = '';
     req.on('data', chunk => { body += chunk.toString(); });
@@ -215,16 +220,15 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // 4. API: Decks Management & Meta Suggestions
   if (req.method === 'GET' && pathname === '/api/decks') {
     const decks = db.prepare('SELECT * FROM decks ORDER BY deck_name ASC').all();
     const decksWithCards = decks.map(deck => {
       const deckCards = db.prepare(`
-        - dc.*, c.name, c.color, c.card_type, c.market_price, c.image_url,
+        SELECT dc.*, c.name, c.color, c.card_type, c.market_price, c.image_url,
         COALESCE(col.quantity, 0) AS owned_qty
         FROM deck_cards dc
         JOIN cards c ON dc.card_id = c.card_id
-        LEFT JOIN collection col ON c.card_id = col.card_id AND col.variant = 'Regular'
+        LEFT JOIN collection col ON c.card_id = c.card_id AND col.variant = 'Regular'
         WHERE dc.deck_id = ?
       `).all(deck.deck_id);
       return { ...deck, cards: deckCards };
@@ -270,9 +274,8 @@ const server = http.createServer(async (req, res) => {
       const { leader_card_id } = JSON.parse(body);
       const leader = db.prepare('SELECT * FROM cards WHERE card_id = ?').get(leader_card_id);
       const leaderName = leader ? leader.name : 'Custom Meta Build';
-
-      // Generate a structured competitive meta build using existing database cards matching color/theme
       const color = leader ? leader.color : 'Red';
+
       const candidateCards = db.prepare(`
         SELECT card_id FROM cards 
         WHERE color LIKE ? AND card_type = 'Character' 
@@ -295,7 +298,6 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // 5. API: Sync Prices
   if (req.method === 'POST' && pathname === '/api/sync-prices') {
     try {
       const result = await syncAllPricesAndCards();
