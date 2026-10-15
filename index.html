@@ -6,18 +6,19 @@
   <title>L3-Vault | One Piece TCG Collection & Deck Manager</title>
   <style>
     :root {
-      --bg: #0d1117;
-      --panel: #161b22;
-      --panel-alt: #1f2630;
-      --border: #30363d;
-      --text: #e6edf3;
-      --muted: #8b949e;
-      --accent: #f0883e;
-      --accent-hover: #ff9b50;
-      --green: #238636;
-      --green-bright: #3fb950;
-      --red: #da3633;
-      --blue: #2f81f7;
+      /* Restored Classic Ocean & Navy Blue Theme */
+      --bg: #0b1120;
+      --panel: #111827;
+      --panel-alt: #1e293b;
+      --border: #334155;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent-hover: #0ea5e9;
+      --blue-deep: #2563eb;
+      --green: #059669;
+      --green-bright: #34d399;
+      --red: #dc2626;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -26,7 +27,6 @@
       color: var(--text);
       min-height: 100vh;
     }
-    /* Header */
     header {
       background: var(--panel);
       border-bottom: 1px solid var(--border);
@@ -39,6 +39,7 @@
       position: sticky;
       top: 0;
       z-index: 100;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
     }
     .brand {
       display: flex;
@@ -61,9 +62,9 @@
       border: 1px solid var(--accent);
     }
     .vault-switcher label {
-      font-size: 0.8rem;
-      color: var(--muted);
-      font-weight: 600;
+      font-size: 0.78rem;
+      color: var(--accent);
+      font-weight: 700;
       text-transform: uppercase;
     }
     .vault-switcher select {
@@ -92,11 +93,13 @@
       cursor: pointer;
       font-weight: 600;
       font-size: 0.9rem;
+      transition: 0.15s;
     }
     .tab-btn.active {
-      background: var(--accent);
-      color: #000;
+      background: var(--blue-deep);
+      color: #fff;
       border-color: var(--accent);
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.3);
     }
     .header-actions {
       display: flex;
@@ -115,11 +118,11 @@
       font-weight: 600;
       transition: 0.15s;
     }
-    .btn:hover { border-color: var(--muted); }
-    .btn-primary { background: var(--accent); color: #000; border-color: var(--accent); }
-    .btn-primary:hover { background: var(--accent-hover); }
-    .btn-green { background: var(--green); color: #fff; border-color: var(--green); }
-    .btn-red { background: var(--red); color: #fff; border-color: var(--red); }
+    .btn:hover { border-color: var(--accent); color: #fff; }
+    .btn-primary { background: var(--blue-deep); color: #fff; border-color: var(--accent); }
+    .btn-primary:hover { background: var(--accent-hover); color: #000; }
+    .btn-green { background: var(--green); color: #fff; border-color: var(--green-bright); }
+    .btn-red { background: var(--red); color: #fff; border-color: #f87171; }
 
     /* Stats Bar */
     .stats-bar {
@@ -127,7 +130,7 @@
       grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
       gap: 12px;
       padding: 16px 24px;
-      background: #11161d;
+      background: #080d1a;
       border-bottom: 1px solid var(--border);
     }
     .stat-card {
@@ -158,6 +161,10 @@
       border-radius: 6px;
       font-size: 0.9rem;
     }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
     .filter-bar input[type="text"] { flex: 1; min-width: 220px; }
 
     /* Card Grid */
@@ -177,10 +184,10 @@
       transition: transform 0.15s, border-color 0.15s;
     }
     .card-tile:hover { border-color: var(--accent); transform: translateY(-2px); }
-    .card-tile.owned { border-color: var(--green); }
+    .card-tile.owned { border-color: var(--accent); box-shadow: 0 0 10px rgba(56, 189, 248, 0.18); }
     .card-img-wrap {
       position: relative;
-      background: #080b0f;
+      background: #060913;
       aspect-ratio: 2.5 / 3.5;
       cursor: pointer;
       overflow: hidden;
@@ -194,7 +201,7 @@
       position: absolute;
       top: 8px;
       right: 8px;
-      background: rgba(13, 17, 23, 0.9);
+      background: rgba(11, 17, 32, 0.92);
       color: var(--green-bright);
       padding: 3px 8px;
       border-radius: 6px;
@@ -206,12 +213,13 @@
       position: absolute;
       top: 8px;
       left: 8px;
-      background: rgba(13, 17, 23, 0.9);
+      background: rgba(11, 17, 32, 0.92);
       color: var(--accent);
       padding: 3px 7px;
       border-radius: 6px;
       font-weight: 700;
       font-size: 0.75rem;
+      border: 1px solid var(--border);
     }
     .card-body {
       padding: 10px 12px;
@@ -242,8 +250,8 @@
     .loc-pill {
       font-size: 0.7rem;
       background: var(--panel-alt);
-      color: #9ecbff;
-      border: 1px solid #2f81f755;
+      color: var(--accent);
+      border: 1px solid rgba(56, 189, 248, 0.4);
       padding: 1px 6px;
       border-radius: 4px;
     }
@@ -274,14 +282,14 @@
       align-items: center;
       justify-content: center;
     }
-    .qty-btn:hover { background: var(--accent); color: #000; border-color: var(--accent); }
+    .qty-btn:hover { background: var(--blue-deep); border-color: var(--accent); }
     .qty-num { font-weight: 800; font-size: 1rem; min-width: 24px; text-align: center; }
 
     /* Modal */
     .modal-backdrop {
       position: fixed;
       inset: 0;
-      background: rgba(0, 0, 0, 0.78);
+      background: rgba(5, 10, 20, 0.82);
       display: none;
       align-items: center;
       justify-content: center;
@@ -291,14 +299,15 @@
     .modal-backdrop.open { display: flex; }
     .modal-content {
       background: var(--panel);
-      border: 1px solid var(--border);
+      border: 1px solid var(--accent);
       border-radius: 12px;
-      max-width: 900px;
+      max-width: 920px;
       width: 100%;
       max-height: 90vh;
       overflow-y: auto;
       padding: 24px;
       position: relative;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
     }
     .modal-close {
       position: absolute;
@@ -344,7 +353,7 @@
       border-radius: 8px;
       font-size: 0.88rem;
       line-height: 1.5;
-      color: #d0d7de;
+      color: #e2e8f0;
       margin-bottom: 18px;
       white-space: pre-wrap;
     }
@@ -444,9 +453,9 @@
 
     <div class="header-actions">
       <span id="syncStatusText" style="font-size:0.78rem; color:var(--muted);"></span>
-      <button class="btn" onclick="triggerPriceSync()" id="syncBtn">🔄 Sync New Sets & Prices</button>
-      <button class="btn" onclick="downloadBackup()">⬇ Backup Vault</button>
-      <button class="btn" onclick="document.getElementById('restoreFileInput').click()">⬆ Restore</button>
+      <button class="btn" onclick="triggerPriceSync()" id="syncBtn" title="Download latest sets, card images, and TCGplayer prices">🔄 Sync New Sets & Prices</button>
+      <button class="btn" onclick="downloadBackup()" title="Save a backup file of Larry's & Graham's collections to your PC">⬇ Backup Vault</button>
+      <button class="btn" onclick="document.getElementById('restoreFileInput').click()" title="Restore your saved Vault backup file after server updates">⬆ Restore</button>
       <input type="file" id="restoreFileInput" accept=".json" style="display:none" onchange="restoreBackupFile(event)" />
     </div>
   </header>
@@ -455,7 +464,7 @@
   <div class="stats-bar">
     <div class="stat-card">
       <div class="stat-label">Active Vault</div>
-      <div class="stat-value" id="statActiveOwner">Larry's Collection</div>
+      <div class="stat-value" id="statActiveOwner" style="color:var(--accent);">Larry's Collection</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">Total Cards Owned</div>
@@ -504,11 +513,12 @@
       </select>
       <select id="sortFilter" onchange="resetAndRenderCatalog()">
         <option value="id">Sort: Card ID</option>
-        <option value="price_desc">Sort: Price (High → Low)</option>
         <option value="price_asc">Sort: Price (Low → High)</option>
+        <option value="price_desc">Sort: Price (High → Low)</option>
         <option value="owned_desc">Sort: Quantity Owned</option>
         <option value="name">Sort: Name (A → Z)</option>
       </select>
+      <button class="btn btn-primary" onclick="resetCatalogFilters()" title="Clear all search filters and return to default view">↺ Reset Filters</button>
     </div>
 
     <div class="container">
@@ -524,8 +534,8 @@
     <!-- Top Deck Controls -->
     <div class="panel-box" style="margin-bottom: 18px; display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between;">
       <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center;">
-        <label style="font-weight:700; font-size:0.9rem;">Saved Decks:</label>
-        <select id="savedDecksSelect" onchange="loadSelectedDeck(this.value)" style="min-width:220px;">
+        <label style="font-weight:700; font-size:0.9rem; color:var(--accent);">My Saved Decks:</label>
+        <select id="savedDecksSelect" onchange="loadSelectedDeck(this.value)" style="min-width:210px;">
           <option value="">-- Create New Deck --</option>
         </select>
         <button class="btn" onclick="startNewDeck()">+ New Blank Deck</button>
@@ -540,11 +550,14 @@
     </div>
 
     <div class="deck-workspace">
-      <!-- LEFT: VISUAL CARD PICKER -->
+      <!-- LEFT: VISUAL CARD PICKER (CHEAPEST REGULAR PRINT BY DEFAULT) -->
       <div class="panel-box">
-        <h3 style="margin-bottom:10px; color:var(--accent);">1. Pick Cards to Add to Deck</h3>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <h3 style="color:var(--accent);">1. Pick Cards to Add to Deck</h3>
+          <button class="btn" style="padding:4px 10px; font-size:0.78rem;" onclick="resetDeckPickerFilters()">↺ Reset Picker Filters</button>
+        </div>
         <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
-          <input type="text" id="deckSearchInput" placeholder="Search cards to add..." oninput="renderDeckPicker()" style="flex:1; min-width:160px;" />
+          <input type="text" id="deckSearchInput" placeholder="Search card name or ID (e.g., Luffy, OP13-083)..." oninput="renderDeckPicker()" style="flex:1; min-width:170px;" />
           <select id="deckPickerSet" onchange="renderDeckPicker()">
             <option value="">All Sets</option>
           </select>
@@ -554,9 +567,15 @@
             <option value="Event">Events</option>
             <option value="Stage">Stages</option>
           </select>
-          <label style="display:flex; align-items:center; gap:5px; font-size:0.82rem; cursor:pointer;">
+        </div>
+        <div style="display:flex; flex-wrap:wrap; gap:14px; margin-bottom:10px; font-size:0.82rem; color:var(--muted);">
+          <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
             <input type="checkbox" id="matchLeaderColorChk" checked onchange="renderDeckPicker()" />
-            Match Leader Color
+            Match Selected Leader's Color
+          </label>
+          <label style="display:flex; align-items:center; gap:6px; cursor:pointer; color:var(--green-bright); font-weight:600;">
+            <input type="checkbox" id="cheapestPrintOnlyChk" checked onchange="renderDeckPicker()" />
+            Show Cheapest Regular Print Only (Hide Manga / Alt Arts)
           </label>
         </div>
         <div id="deckPickerGrid" class="picker-list"></div>
@@ -566,16 +585,29 @@
       <div class="panel-box">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
           <h3 style="color:var(--accent);">2. Active Decklist (<span id="deckTotalCount">0</span> / 50 Cards)</h3>
-          <button class="btn btn-green" onclick="saveCurrentDeck()">💾 Save Deck</button>
+          <button class="btn btn-green" onclick="saveCurrentDeck()">💾 Save Deck to Vault</button>
+        </div>
+
+        <!-- Load Verified Online Tournament Deck Bar -->
+        <div style="background:var(--bg); border:1px solid var(--border); padding:10px 12px; border-radius:8px; margin-bottom:12px;">
+          <label style="font-size:0.78rem; color:var(--accent); font-weight:700; display:block; margin-bottom:6px;">
+            🏆 Load Verified Online Tournament Deck (Auto-Picks Cheapest Prints):
+          </label>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <select id="tournamentDeckSelect" style="flex:1; min-width:200px;">
+              <option value="">-- Choose a Championship Tournament Deck --</option>
+            </select>
+            <button class="btn btn-primary" onclick="loadTournamentPreset()">Load Tournament Deck</button>
+          </div>
         </div>
 
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px;">
           <div>
             <label style="font-size:0.78rem; color:var(--muted); display:block; margin-bottom:4px;">Deck Name</label>
-            <input type="text" id="deckNameInput" placeholder="e.g., Red/Green Luffy Rush" style="width:100%;" />
+            <input type="text" id="deckNameInput" placeholder="e.g., Red/Green Luffy Tournament" style="width:100%;" />
           </div>
           <div>
-            <label style="font-size:0.78rem; color:var(--muted); display:block; margin-bottom:4px;">Leader Card</label>
+            <label style="font-size:0.78rem; color:var(--muted); display:block; margin-bottom:4px;">Leader Card (Cheapest Regular Print)</label>
             <select id="deckLeaderSelect" onchange="onLeaderChanged()" style="width:100%;">
               <option value="">-- Select a Leader --</option>
             </select>
@@ -583,17 +615,17 @@
         </div>
 
         <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
-          <button class="btn btn-primary" onclick="suggestMetaDeck()">⚡ Auto-Build 50-Card Synergy Curve</button>
-          <button class="btn" onclick="togglePasteImportBox()">📋 Paste Online Decklist</button>
+          <button class="btn btn-primary" onclick="suggestMetaDeck()">⚡ Auto-Build 50-Card Deck (Cheapest Prints)</button>
+          <button class="btn" onclick="togglePasteImportBox()">📋 Paste Decklist from LimitlessTCG / Egman</button>
         </div>
 
         <!-- Paste Decklist Box -->
         <div id="pasteImportBox" class="hidden" style="background:var(--bg); padding:10px; border:1px solid var(--border); border-radius:8px; margin-bottom:12px;">
           <div style="font-size:0.8rem; color:var(--muted); margin-bottom:6px;">
-            Paste a decklist (e.g., <code>4 OP01-006</code> or <code>4x OP01-016 Nami</code>, one per line):
+            Copy any tournament decklist text from <strong>LimitlessTCG</strong> or <strong>Egman Events</strong> and paste below (automatically resolves to the cheapest regular print):
           </div>
-          <textarea id="pasteDeckTextarea" rows="5" style="width:100%; margin-bottom:8px;" placeholder="1 OP01-001&#10;4 OP01-016&#10;4 OP01-025"></textarea>
-          <button class="btn btn-green" onclick="importPastedDecklist()">Import Cards into Deck</button>
+          <textarea id="pasteDeckTextarea" rows="5" style="width:100%; margin-bottom:8px;" placeholder="1 OP13-001&#10;4 OP01-016&#10;4 OP13-016"></textarea>
+          <button class="btn btn-green" onclick="importPastedDecklist()">Import & Pick Cheapest Prints</button>
         </div>
 
         <div style="margin-bottom:10px;">
@@ -602,8 +634,8 @@
         </div>
 
         <div style="display:flex; justify-content:space-between; font-size:0.82rem; color:var(--muted); padding:8px 0; border-top:1px solid var(--border); border-bottom:1px solid var(--border); margin-bottom:10px;">
-          <span>Est. Deck Value: <strong id="deckTotalValue" style="color:var(--green-bright);">$0.00</strong></span>
-          <span>Missing Value to Buy: <strong id="deckMissingValue" style="color:var(--accent);">$0.00</strong></span>
+          <span>Est. Deck Value (Base Prints): <strong id="deckTotalValue" style="color:var(--green-bright);">$0.00</strong></span>
+          <span>Missing Cost to Buy: <strong id="deckMissingValue" style="color:var(--accent);">$0.00</strong></span>
         </div>
 
         <div id="activeDeckCardsList" style="max-height:420px; overflow-y:auto;"></div>
@@ -611,7 +643,7 @@
     </div>
   </div>
 
-  <!-- CARD DETAIL & PER-COPY LOCATION MODAL -->
+  <!-- CARD DETAIL & USER-CREATED LOCATION MODAL -->
   <div id="cardModal" class="modal-backdrop" onclick="if(event.target===this) closeCardModal()">
     <div class="modal-content">
       <button class="modal-close" onclick="closeCardModal()">&times;</button>
@@ -628,7 +660,7 @@
           <div id="modalCardSet" style="font-size:0.82rem; color:var(--accent); font-weight:700;"></div>
           <h2 id="modalCardName" style="margin:4px 0 10px 0; font-size:1.4rem;"></h2>
 
-          <!-- RESTORED READABLE CARD ATTRIBUTES GRID -->
+          <!-- READABLE CARD ATTRIBUTES GRID -->
           <div class="attr-grid">
             <div class="attr-box"><span>Card ID</span><strong id="attrId">-</strong></div>
             <div class="attr-box"><span>Rarity</span><strong id="attrRarity">-</strong></div>
@@ -648,7 +680,7 @@
           <div style="font-size:0.75rem; color:var(--muted); text-transform:uppercase; margin-bottom:4px;">Card Effect / Text</div>
           <div id="attrEffect" class="effect-box">No effect text.</div>
 
-          <!-- PER-COPY LOCATION MANAGER -->
+          <!-- PER-COPY USER-CREATED LOCATION MANAGER -->
           <div class="copies-section">
             <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:10px; margin-bottom:12px;">
               <h3 style="font-size:1rem; color:var(--accent);">
@@ -657,10 +689,21 @@
               <button class="btn btn-green" onclick="adjustCardQty(activeModalCardId, 1)">+ Add Copy</button>
             </div>
 
-            <!-- Add Custom Location to Dropdown Bar -->
-            <div style="display:flex; gap:8px; margin-bottom:12px;">
-              <input type="text" id="newLocationInput" placeholder="Add new location to dropdown (e.g., Red Folder, Robin Deck)..." style="flex:1;" />
-              <button class="btn btn-primary" onclick="addNewLocation()">+ Add Location</button>
+            <!-- Add or Delete User-Created Locations -->
+            <div style="background:var(--bg); border:1px solid var(--border); padding:10px; border-radius:8px; margin-bottom:12px;">
+              <div style="font-size:0.75rem; color:var(--muted); margin-bottom:6px; text-transform:uppercase; font-weight:700;">
+                Manage Your Custom Locations (Decks, Binders, Boxes)
+              </div>
+              <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
+                <input type="text" id="newLocationInput" placeholder="Type new location (e.g., Red Binder, Robin Deck)..." style="flex:1; min-width:180px;" />
+                <button class="btn btn-primary" onclick="addNewLocation()">+ Add Location</button>
+              </div>
+              <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+                <select id="deleteLocationSelect" style="flex:1; min-width:180px;">
+                  <option value="">-- Select a Custom Location to Delete --</option>
+                </select>
+                <button class="btn btn-red" onclick="deleteSelectedLocation()">🗑 Delete Location</button>
+              </div>
             </div>
 
             <div id="modalCopiesList"></div>
@@ -674,7 +717,10 @@
     let activeOwner = localStorage.getItem('l3_active_owner') || "Larry's Collection";
     let allCards = [];
     let cardMap = new Map();
+    let cheapestBaseMap = new Map(); // baseId -> cheapest regular card object
+    let ownedByBaseIdMap = new Map(); // baseId -> total copies owned across any print
     let ownerLocations = ['Unassigned'];
+    let tournamentDecks = [];
     let filteredCards = [];
     let displayLimit = 60;
     let activeModalCardId = null;
@@ -682,15 +728,53 @@
     // Deck Builder State
     let savedDecks = [];
     let currentDeckId = null;
-    let currentDeckCards = []; // [{ card_id, quantity }]
+    let currentDeckCards = [];
 
-    const PLACEHOLDER_IMG = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='250' height='350'%3E%3Crect width='100%25' height='100%25' fill='%23161b22'/%3E%3Ctext x='50%25' y='50%25' fill='%238b949e' font-family='sans-serif' font-size='14' text-anchor='middle'%3ENo Card Image%3C/text%3E%3C/svg%3E";
+    const PLACEHOLDER_IMG = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='250' height='350'%3E%3Crect width='100%25' height='100%25' fill='%23111827'/%3E%3Ctext x='50%25' y='50%25' fill='%2394a3b8' font-family='sans-serif' font-size='14' text-anchor='middle'%3EImage Pending Sync%3C/text%3E%3C/svg%3E";
 
     window.addEventListener('DOMContentLoaded', () => {
       document.getElementById('vaultOwnerSelect').value = activeOwner;
       document.getElementById('statActiveOwner').textContent = activeOwner;
       loadVaultData();
     });
+
+    function getBaseId(cardId) {
+      const m = String(cardId || '').match(/^([A-Z]{1,4}\d{0,2}-\d{3})/i);
+      return m ? m[1].toUpperCase() : String(cardId || '').split(' ')[0].trim();
+    }
+
+    function isSpecialVariant(card) {
+      return /\((Parallel|Alternate Art|Manga|Box Topper|SP|TR|Foil)\)/i.test(card.card_id) ||
+             /\((Parallel|Alternate Art|Manga|Box Topper|SP|TR)\)/i.test(card.name || '');
+    }
+
+    // Automatic Multi-CDN Image Fallback so broken images self-heal
+    function getBestCardImage(card) {
+      if (card.image_url && card.image_url.startsWith('http')) return card.image_url;
+      const baseId = getBaseId(card.card_id);
+      if (/^[A-Z]{2,4}\d{0,2}-\d{3}$/i.test(baseId)) {
+        return `https://en.onepiece-cardgame.com/images/cardlist/card/${baseId}.png`;
+      }
+      return PLACEHOLDER_IMG;
+    }
+
+    function handleImgError(imgEl, cardId) {
+      const baseId = getBaseId(cardId);
+      const setPrefix = baseId.split('-')[0];
+      const limitlessUrl = `https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/one-piece/${setPrefix}/${baseId}_EN.webp`;
+      const bandaiUrl = `https://en.onepiece-cardgame.com/images/cardlist/card/${baseId}.png`;
+
+      if (!imgEl.dataset.triedBandai && imgEl.src !== bandaiUrl) {
+        imgEl.dataset.triedBandai = '1';
+        imgEl.src = bandaiUrl;
+      } else if (!imgEl.dataset.triedLimitless && imgEl.src !== limitlessUrl) {
+        imgEl.dataset.triedLimitless = '1';
+        imgEl.src = limitlessUrl;
+      } else {
+        imgEl.onerror = null;
+        imgEl.src = PLACEHOLDER_IMG;
+      }
+    }
 
     async function switchVaultOwner(newOwner) {
       activeOwner = newOwner;
@@ -712,13 +796,47 @@
       }
     }
 
+    function buildCheapestAndOwnedMaps() {
+      cheapestBaseMap.clear();
+      ownedByBaseIdMap.clear();
+
+      for (const c of allCards) {
+        const baseId = getBaseId(c.card_id);
+        const prevOwned = ownedByBaseIdMap.get(baseId) || { qty: 0, locations: [] };
+        prevOwned.qty += (c.owned_qty || 0);
+        for (const cp of (c.copies || [])) {
+          if (cp.location) prevOwned.locations.push(cp.location);
+        }
+        ownedByBaseIdMap.set(baseId, prevOwned);
+
+        const existing = cheapestBaseMap.get(baseId);
+        if (!existing) {
+          cheapestBaseMap.set(baseId, c);
+        } else {
+          const curIsSpecial = isSpecialVariant(existing);
+          const newIsSpecial = isSpecialVariant(c);
+          const curPrice = existing.market_price > 0 ? existing.market_price : 99999;
+          const newPrice = c.market_price > 0 ? c.market_price : 99999;
+
+          if (curIsSpecial && !newIsSpecial) {
+            cheapestBaseMap.set(baseId, c);
+          } else if (curIsSpecial === newIsSpecial && newPrice < curPrice) {
+            cheapestBaseMap.set(baseId, c);
+          }
+        }
+      }
+    }
+
     async function loadVaultData() {
       const res = await fetch(`/api/cards?owner=${encodeURIComponent(activeOwner)}`);
       const data = await res.json();
       allCards = data.cards || [];
       ownerLocations = data.locations || ['Unassigned'];
+      tournamentDecks = data.tournamentDecks || [];
+
       cardMap.clear();
       allCards.forEach(c => cardMap.set(c.card_id, c));
+      buildCheapestAndOwnedMaps();
 
       document.getElementById('syncStatusText').textContent = `Last Sync: ${data.lastSync || 'Ready'}`;
 
@@ -745,20 +863,54 @@
       deckSetSelect.innerHTML = `<option value="">All Sets</option>` +
         sets.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
 
-      // Locations filter
+      // Locations filter & Delete Location selector
       const locSelect = document.getElementById('locationFilter');
       const currentLoc = locSelect.value;
       locSelect.innerHTML = `<option value="">All Locations</option>` +
         ownerLocations.map(l => `<option value="${escapeHtml(l)}">📁 ${escapeHtml(l)}</option>`).join('');
       locSelect.value = currentLoc;
 
-      // Leaders dropdown in Deck Builder
-      const leaders = allCards.filter(c => c.card_type === 'Leader');
+      const delLocSelect = document.getElementById('deleteLocationSelect');
+      const customLocs = ownerLocations.filter(l => l !== 'Unassigned');
+      delLocSelect.innerHTML = `<option value="">-- Select Custom Location to Delete (${customLocs.length}) --</option>` +
+        customLocs.map(l => `<option value="${escapeHtml(l)}">${escapeHtml(l)}</option>`).join('');
+
+      // Leaders dropdown in Deck Builder (Only show cheapest regular print per Leader)
+      const uniqueLeaders = Array.from(cheapestBaseMap.values())
+        .filter(c => c.card_type === 'Leader')
+        .sort((a, b) => a.card_id.localeCompare(b.card_id));
+
       const leaderSelect = document.getElementById('deckLeaderSelect');
       const currentLeader = leaderSelect.value;
-      leaderSelect.innerHTML = `<option value="">-- Select a Leader (${leaders.length}) --</option>` +
-        leaders.map(l => `<option value="${escapeHtml(l.card_id)}">${escapeHtml(l.card_id)} - ${escapeHtml(l.name)} (${escapeHtml(l.color || '')})</option>`).join('');
+      leaderSelect.innerHTML = `<option value="">-- Select a Leader (${uniqueLeaders.length}) --</option>` +
+        uniqueLeaders.map(l => `<option value="${escapeHtml(l.card_id)}">${escapeHtml( getBaseId(l.card_id) )} - ${escapeHtml(l.name)} (${escapeHtml(l.color || '')}) - $${Number(l.market_price || 0).toFixed(2)}</option>`).join('');
       leaderSelect.value = currentLeader;
+
+      // Tournament Decks dropdown
+      const tourneySelect = document.getElementById('tournamentDeckSelect');
+      tourneySelect.innerHTML = `<option value="">-- Choose a Championship Tournament Deck --</option>` +
+        tournamentDecks.map(t => `<option value="${escapeHtml(t.id)}">${escapeHtml(t.name)}</option>`).join('');
+    }
+
+    // RESET FILTERS BUTTON HANDLERS
+    function resetCatalogFilters() {
+      document.getElementById('searchInput').value = '';
+      document.getElementById('setFilter').value = '';
+      document.getElementById('colorFilter').value = '';
+      document.getElementById('typeFilter').value = '';
+      document.getElementById('ownershipFilter').value = 'all';
+      document.getElementById('locationFilter').value = '';
+      document.getElementById('sortFilter').value = 'id';
+      resetAndRenderCatalog();
+    }
+
+    function resetDeckPickerFilters() {
+      document.getElementById('deckSearchInput').value = '';
+      document.getElementById('deckPickerSet').value = '';
+      document.getElementById('deckPickerType').value = '';
+      document.getElementById('matchLeaderColorChk').checked = true;
+      document.getElementById('cheapestPrintOnlyChk').checked = true;
+      renderDeckPicker();
     }
 
     function updateCollectionStats() {
@@ -830,7 +982,7 @@
       const slice = filteredCards.slice(0, displayLimit);
 
       if (slice.length === 0) {
-        grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:40px; color:var(--muted);">No matching cards found. If the catalog is empty, click "Sync New Sets & Prices" above.</div>`;
+        grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:40px; color:var(--muted);">No matching cards found. Click "↺ Reset Filters" or "🔄 Sync New Sets & Prices" above.</div>`;
         document.getElementById('loadMoreBtn').classList.add('hidden');
         return;
       }
@@ -842,9 +994,8 @@
     function renderCardTileHtml(c) {
       const qty = c.owned_qty || 0;
       const price = Number(c.market_price || 0).toFixed(2);
-      const img = c.image_url || PLACEHOLDER_IMG;
+      const img = getBestCardImage(c);
 
-      // Summarize locations for this card's copies
       const locCounts = {};
       for (const cp of (c.copies || [])) {
         const l = cp.location || 'Unassigned';
@@ -859,7 +1010,7 @@
       return `
         <div class="card-tile ${qty > 0 ? 'owned' : ''}" id="tile-${escapeHtml(c.card_id)}">
           <div class="card-img-wrap" onclick="openCardModal('${safeId}')">
-            <img src="${escapeHtml(img)}" loading="lazy" alt="${escapeHtml(c.name)}" onerror="this.src='${PLACEHOLDER_IMG}'" />
+            <img src="${escapeHtml(img)}" loading="lazy" alt="${escapeHtml(c.name)}" onerror="handleImgError(this, '${safeId}')" />
             <span class="rarity-badge">${escapeHtml(c.rarity || 'OP')}</span>
             <span class="price-badge">$${price}</span>
           </div>
@@ -883,7 +1034,6 @@
       `;
     }
 
-    // WORKING + AND - QUANTITY ADJUSTMENT
     async function adjustCardQty(cardId, delta) {
       const card = cardMap.get(cardId);
       if (!card) return;
@@ -902,6 +1052,7 @@
       if (data.success) {
         card.owned_qty = data.owned_qty;
         card.copies = data.copies || [];
+        buildCheapestAndOwnedMaps();
         updateSingleCardTileUI(card);
         updateCollectionStats();
         if (activeModalCardId === cardId) {
@@ -929,18 +1080,22 @@
       }
     }
 
-    // CARD DETAIL & PER-COPY LOCATION MODAL
+    // CARD DETAIL & USER LOCATION MODAL
     function openCardModal(cardId) {
       const c = cardMap.get(cardId);
       if (!c) return;
       activeModalCardId = cardId;
 
-      document.getElementById('modalCardImg').src = c.image_url || PLACEHOLDER_IMG;
+      const imgEl = document.getElementById('modalCardImg');
+      delete imgEl.dataset.triedBandai;
+      delete imgEl.dataset.triedLimitless;
+      imgEl.onerror = () => handleImgError(imgEl, c.card_id);
+      imgEl.src = getBestCardImage(c);
+
       document.getElementById('modalCardPrice').textContent = `$${Number(c.market_price || 0).toFixed(2)}`;
       document.getElementById('modalCardSet').textContent = `${c.set_name || c.set_code || 'One Piece TCG'}`;
       document.getElementById('modalCardName').textContent = c.name;
 
-      // Restored Readable Card Attributes
       document.getElementById('attrId').textContent = c.card_id || '-';
       document.getElementById('attrRarity').textContent = c.rarity || '-';
       document.getElementById('attrType').textContent = c.card_type || '-';
@@ -993,7 +1148,7 @@
             <select onchange="updateCopyRow(${cp.copy_id}, null, this.value, null)" id="cp-cond-${cp.copy_id}" title="Condition">
               ${condOptions}
             </select>
-            <input type="text" value="${escapeHtml(cp.notes || '')}" placeholder="Copy note (e.g., Foil, Page 4)..."
+            <input type="text" value="${escapeHtml(cp.notes || '')}" placeholder="Copy note (e.g., Page 2, Foil)..."
               onchange="updateCopyRow(${cp.copy_id}, null, null, this.value)" id="cp-note-${cp.copy_id}" />
             <button class="btn btn-red" style="padding:5px 9px;" onclick="deleteSpecificCopy(${cp.copy_id})" title="Delete this copy">🗑</button>
           </div>
@@ -1017,6 +1172,7 @@
         if (card) {
           card.copies = data.copies;
           card.owned_qty = data.copies.length;
+          buildCheapestAndOwnedMaps();
           updateSingleCardTileUI(card);
         }
       }
@@ -1034,6 +1190,7 @@
         if (card) {
           card.copies = data.copies || [];
           card.owned_qty = data.owned_qty;
+          buildCheapestAndOwnedMaps();
           updateSingleCardTileUI(card);
           updateCollectionStats();
           renderModalCopiesList(card);
@@ -1059,6 +1216,26 @@
         if (activeModalCardId && cardMap.has(activeModalCardId)) {
           renderModalCopiesList(cardMap.get(activeModalCardId));
         }
+      }
+    }
+
+    async function deleteSelectedLocation() {
+      const sel = document.getElementById('deleteLocationSelect');
+      const locName = sel.value;
+      if (!locName) {
+        alert('Select a custom location to delete first.');
+        return;
+      }
+      if (!confirm(`Delete location "${locName}"? Any cards assigned to it will be set back to Unassigned.`)) return;
+
+      const res = await fetch('/api/locations', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ owner: activeOwner, name: locName })
+      });
+      const data = await res.json();
+      if (data.success) {
+        await loadVaultData();
       }
     }
 
@@ -1113,11 +1290,15 @@
       const setCode = document.getElementById('deckPickerSet').value;
       const type = document.getElementById('deckPickerType').value;
       const matchColor = document.getElementById('matchLeaderColorChk').checked;
+      const cheapestOnly = document.getElementById('cheapestPrintOnlyChk').checked;
       const leaderId = document.getElementById('deckLeaderSelect').value;
       const leader = cardMap.get(leaderId);
       const leaderColors = leader && leader.color ? leader.color.split('/').map(s => s.trim()) : [];
 
-      const pool = allCards.filter(c => {
+      // Source pool: either deduplicated Cheapest Base Prints only, or all prints
+      const sourceCards = cheapestOnly ? Array.from(cheapestBaseMap.values()) : allCards;
+
+      const pool = sourceCards.filter(c => {
         if (c.card_type === 'Leader') return false;
         if (setCode && c.set_code !== setCode) return false;
         if (type && c.card_type !== type) return false;
@@ -1126,25 +1307,36 @@
           if (!cColors.some(col => leaderColors.includes(col))) return false;
         }
         if (q) {
-          const hay = `${c.card_id} ${c.name} ${c.subtypes || ''} ${c.effect || ''}`.toLowerCase();
-          if (!hay.includes(q)) return false;
+          // Support searching "OP13-83" as "OP13-083" automatically
+          const normalizedQ = q.replace(/^([a-z]{2,4}\d{0,2})-(\d{1,2})$/i, (_, p1, p2) => `${p1}-${p2.padStart(3, '0')}`);
+          const hay = `${c.card_id} ${getBaseId(c.card_id)} ${c.name} ${c.subtypes || ''} ${c.effect || ''}`.toLowerCase();
+          if (!hay.includes(q) && !hay.includes(normalizedQ)) return false;
         }
         return true;
+      }).sort((a, b) => {
+        const pa = a.market_price > 0 ? a.market_price : 99999;
+        const pb = b.market_price > 0 ? b.market_price : 99999;
+        return pa - pb;
       }).slice(0, 80);
 
       const grid = document.getElementById('deckPickerGrid');
       grid.innerHTML = pool.map(c => {
-        const inDeck = currentDeckCards.find(dc => dc.card_id === c.card_id);
+        const baseId = getBaseId(c.card_id);
+        const inDeck = currentDeckCards.find(dc => getBaseId(dc.card_id) === baseId);
         const deckQty = inDeck ? inDeck.quantity : 0;
+        const ownedInfo = ownedByBaseIdMap.get(baseId) || { qty: 0 };
         const safeId = escapeJsStr(c.card_id);
+        const img = getBestCardImage(c);
+
         return `
           <div class="picker-card">
-            <img src="${escapeHtml(c.image_url || PLACEHOLDER_IMG)}" loading="lazy" onclick="openCardModal('${safeId}')" onerror="this.src='${PLACEHOLDER_IMG}'" />
-            <div style="font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(c.name)}</div>
+            <img src="${escapeHtml(img)}" loading="lazy" onclick="openCardModal('${safeId}')" onerror="handleImgError(this, '${safeId}')" />
+            <div style="font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${escapeHtml(c.name)}">${escapeHtml(c.name)}</div>
             <div style="color:var(--muted); font-size:0.72rem; display:flex; justify-content:space-between;">
-              <span>${escapeHtml(c.card_id)}</span>
-              <span>Own: ${c.owned_qty || 0}</span>
+              <span>${escapeHtml(baseId)}</span>
+              <span style="color:var(--green-bright); font-weight:700;">$${Number(c.market_price || 0).toFixed(2)}</span>
             </div>
+            <div style="color:var(--muted); font-size:0.72rem;">Owned in Vault: <strong>${ownedInfo.qty}</strong></div>
             <button class="btn btn-primary" style="width:100%; padding:4px;" onclick="addCardToDeck('${safeId}', 1)">
               + Add (${deckQty}/4)
             </button>
@@ -1154,7 +1346,11 @@
     }
 
     function addCardToDeck(cardId, delta) {
-      const existing = currentDeckCards.find(c => c.card_id === cardId);
+      const baseId = getBaseId(cardId);
+      const cheapestCard = cheapestBaseMap.get(baseId) || cardMap.get(cardId);
+      const targetCardId = cheapestCard ? cheapestCard.card_id : cardId;
+
+      const existing = currentDeckCards.find(c => getBaseId(c.card_id) === baseId);
       const totalNow = currentDeckCards.reduce((sum, item) => sum + item.quantity, 0);
 
       if (delta > 0 && totalNow >= 50) {
@@ -1163,12 +1359,13 @@
       }
 
       if (existing) {
+        existing.card_id = targetCardId;
         existing.quantity = Math.min(4, existing.quantity + delta);
         if (existing.quantity <= 0) {
-          currentDeckCards = currentDeckCards.filter(c => c.card_id !== cardId);
+          currentDeckCards = currentDeckCards.filter(c => getBaseId(c.card_id) !== baseId);
         }
       } else if (delta > 0) {
-        currentDeckCards.push({ card_id: cardId, quantity: Math.min(4, delta) });
+        currentDeckCards.push({ card_id: targetCardId, quantity: Math.min(4, delta) });
       }
 
       renderDeckPicker();
@@ -1185,14 +1382,17 @@
         document.getElementById('deckTotalCount').textContent = '0';
         document.getElementById('deckTotalValue').textContent = '$0.00';
         document.getElementById('deckMissingValue').textContent = '$0.00';
-        listEl.innerHTML = `<div style="color:var(--muted); padding:20px; text-align:center;">No cards in deck yet. Click cards on the left or click "Auto-Build 50-Card Synergy Curve" above.</div>`;
+        listEl.innerHTML = `<div style="color:var(--muted); padding:20px; text-align:center;">No cards in deck yet. Choose a Championship Tournament Deck above, click "Auto-Build", or pick cards on the left.</div>`;
         return;
       }
 
       listEl.innerHTML = currentDeckCards.map(item => {
-        const card = cardMap.get(item.card_id) || { name: item.card_id, market_price: 0, owned_qty: 0, copies: [] };
+        const baseId = getBaseId(item.card_id);
+        const card = cheapestBaseMap.get(baseId) || cardMap.get(item.card_id) || { name: item.card_id, market_price: 0, owned_qty: 0, copies: [] };
+        const ownedInfo = ownedByBaseIdMap.get(baseId) || { qty: card.owned_qty || 0, locations: [] };
+
         const qty = item.quantity;
-        const owned = card.owned_qty || 0;
+        const owned = ownedInfo.qty;
         const missing = Math.max(0, qty - owned);
         const price = Number(card.market_price) || 0;
 
@@ -1200,15 +1400,15 @@
         totalValue += qty * price;
         missingValue += missing * price;
 
-        const locs = [...new Set((card.copies || []).map(cp => cp.location))].join(', ');
+        const locs = [...new Set(ownedInfo.locations)].join(', ');
         const statusColor = missing === 0 ? 'var(--green-bright)' : 'var(--accent)';
-        const safeId = escapeJsStr(item.card_id);
+        const safeId = escapeJsStr(card.card_id || item.card_id);
 
         return `
           <div class="deck-card-row">
             <div style="flex:1;">
               <div style="font-weight:700; cursor:pointer;" onclick="openCardModal('${safeId}')">
-                ${qty}x ${escapeHtml(card.name)} <span style="color:var(--muted); font-weight:400;">(${escapeHtml(item.card_id)})</span>
+                ${qty}x ${escapeHtml(card.name)} <span style="color:var(--muted); font-weight:400;">(${escapeHtml(baseId)} • $${price.toFixed(2)} ea)</span>
               </div>
               <div style="font-size:0.75rem; color:${statusColor};">
                 Owned: ${owned}/${qty} ${missing > 0 ? `• Need ${missing} ($${(missing * price).toFixed(2)})` : `• Ready`}
@@ -1227,6 +1427,85 @@
       document.getElementById('deckTotalCount').textContent = totalCount;
       document.getElementById('deckTotalValue').textContent = `$${totalValue.toFixed(2)}`;
       document.getElementById('deckMissingValue').textContent = `$${missingValue.toFixed(2)}`;
+    }
+
+    async function loadTournamentPreset() {
+      const tourneyId = document.getElementById('tournamentDeckSelect').value;
+      if (!tourneyId) {
+        alert('Select a Championship Tournament Deck from the dropdown first.');
+        return;
+      }
+      const res = await fetch('/api/decks/meta-suggest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tournament_id: tourneyId })
+      });
+      const data = await res.json();
+      if (data.cards) {
+        document.getElementById('deckNameInput').value = data.deck_name || '';
+        document.getElementById('deckLeaderSelect').value = data.leader_card_id || '';
+        document.getElementById('deckNotesInput').value = data.notes || '';
+        currentDeckCards = data.cards;
+        renderDeckPicker();
+        renderActiveDeckList();
+      }
+    }
+
+    async function suggestMetaDeck() {
+      const leaderId = document.getElementById('deckLeaderSelect').value;
+      if (!leaderId) {
+        alert('Please select a Leader Card first (or choose a Championship Tournament Deck from the dropdown above).');
+        return;
+      }
+      const res = await fetch('/api/decks/meta-suggest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ leader_card_id: leaderId })
+      });
+      const data = await res.json();
+      if (data.cards) {
+        document.getElementById('deckNameInput').value = data.deck_name || '';
+        document.getElementById('deckNotesInput').value = data.notes || '';
+        currentDeckCards = data.cards;
+        renderDeckPicker();
+        renderActiveDeckList();
+      }
+    }
+
+    function togglePasteImportBox() {
+      document.getElementById('pasteImportBox').classList.toggle('hidden');
+    }
+
+    function importPastedDecklist() {
+      const raw = document.getElementById('pasteDeckTextarea').value;
+      const lines = raw.split(/\r?\n/);
+      const imported = [];
+
+      for (const line of lines) {
+        const match = line.match(/(\d+)\s*x?\s*([A-Z]{1,4}\d{0,2}-\d{1,3})/i);
+        if (match) {
+          const qty = Math.min(4, parseInt(match[1], 10) || 1);
+          const parts = match[2].toUpperCase().split('-');
+          const baseId = `${parts[0]}-${parts[1].padStart(3, '0')}`;
+          const cheapest = cheapestBaseMap.get(baseId) || cardMap.get(baseId);
+          const targetId = cheapest ? cheapest.card_id : baseId;
+
+          if (cheapest && cheapest.card_type === 'Leader') {
+            document.getElementById('deckLeaderSelect').value = targetId;
+          } else {
+            imported.push({ card_id: targetId, quantity: qty });
+          }
+        }
+      }
+
+      if (imported.length === 0) {
+        alert('Could not find valid One Piece card IDs (e.g., 4 OP01-016).');
+        return;
+      }
+      currentDeckCards = imported;
+      document.getElementById('pasteImportBox').classList.add('hidden');
+      renderDeckPicker();
+      renderActiveDeckList();
     }
 
     async function saveCurrentDeck() {
@@ -1275,63 +1554,7 @@
       await loadSavedDecks();
     }
 
-    async function suggestMetaDeck() {
-      const leaderId = document.getElementById('deckLeaderSelect').value;
-      if (!leaderId) {
-        alert('Please select a Leader Card first so we can build around its colors and traits.');
-        return;
-      }
-      const res = await fetch('/api/decks/meta-suggest', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ leader_card_id: leaderId })
-      });
-      const data = await res.json();
-      if (data.cards) {
-        if (!document.getElementById('deckNameInput').value) {
-          document.getElementById('deckNameInput').value = data.deck_name;
-        }
-        document.getElementById('deckNotesInput').value = data.notes || '';
-        currentDeckCards = data.cards;
-        renderDeckPicker();
-        renderActiveDeckList();
-      }
-    }
-
-    function togglePasteImportBox() {
-      document.getElementById('pasteImportBox').classList.toggle('hidden');
-    }
-
-    function importPastedDecklist() {
-      const raw = document.getElementById('pasteDeckTextarea').value;
-      const lines = raw.split(/\r?\n/);
-      const imported = [];
-
-      for (const line of lines) {
-        const match = line.match(/(\d+)\s*x?\s*([A-Z]{2,4}\d{2}-\d{3})/i);
-        if (match) {
-          const qty = Math.min(4, parseInt(match[1], 10) || 1);
-          const cid = match[2].toUpperCase();
-          const card = cardMap.get(cid);
-          if (card && card.card_type === 'Leader') {
-            document.getElementById('deckLeaderSelect').value = cid;
-          } else {
-            imported.push({ card_id: cid, quantity: qty });
-          }
-        }
-      }
-
-      if (imported.length === 0) {
-        alert('Could not find valid One Piece card IDs (e.g., 4 OP01-016).');
-        return;
-      }
-      currentDeckCards = imported;
-      document.getElementById('pasteImportBox').classList.add('hidden');
-      renderDeckPicker();
-      renderActiveDeckList();
-    }
-
-    // 3 SPREADSHEET CSV EXPORT MODES (ALL, MISSING ONLY, OWNED WITH LOCATIONS)
+    // 3 SPREADSHEET CSV EXPORT MODES (USES CHEAPEST REGULAR PRINT PRICE)
     function exportDeckCSV(mode) {
       if (currentDeckCards.length === 0) {
         alert('Add cards to your deck first before exporting.');
@@ -1340,23 +1563,26 @@
 
       const deckName = (document.getElementById('deckNameInput').value.trim() || 'One_Piece_Deck').replace(/[^a-zA-Z0-9_-]/g, '_');
       const rows = [
-        ['Card ID', 'Card Name', 'Type', 'Color', 'Deck Qty', 'Owned Qty', 'Missing Qty', 'Unit Price ($)', 'Total Line Cost ($)', 'Storage Locations']
+        ['Card ID', 'Card Name', 'Type', 'Color', 'Deck Qty', 'Owned Qty', 'Missing Qty', 'Cheapest Unit Price ($)', 'Total Line Cost ($)', 'Storage Locations']
       ];
 
       for (const item of currentDeckCards) {
-        const c = cardMap.get(item.card_id) || { name: item.card_id, card_type: '', color: '', market_price: 0, owned_qty: 0, copies: [] };
+        const baseId = getBaseId(item.card_id);
+        const c = cheapestBaseMap.get(baseId) || cardMap.get(item.card_id) || { name: item.card_id, card_type: '', color: '', market_price: 0 };
+        const ownedInfo = ownedByBaseIdMap.get(baseId) || { qty: 0, locations: [] };
+
         const deckQty = item.quantity;
-        const ownedQty = Math.min(deckQty, c.owned_qty || 0);
+        const ownedQty = Math.min(deckQty, ownedInfo.qty);
         const missingQty = Math.max(0, deckQty - ownedQty);
         const unitPrice = Number(c.market_price || 0);
-        const locs = (c.copies || []).map(cp => cp.location).join(' | ') || 'None';
+        const locs = [...new Set(ownedInfo.locations)].join(' | ') || 'None';
 
         if (mode === 'missing' && missingQty <= 0) continue;
         if (mode === 'owned' && ownedQty <= 0) continue;
 
         const targetQty = mode === 'missing' ? missingQty : (mode === 'owned' ? ownedQty : deckQty);
         rows.push([
-          item.card_id,
+          baseId,
           `"${(c.name || '').replace(/"/g, '""')}"`,
           c.card_type || '',
           c.color || '',
@@ -1379,7 +1605,6 @@
       URL.revokeObjectURL(url);
     }
 
-    // PRICE SYNC & BACKUP / RESTORE
     async function triggerPriceSync() {
       const btn = document.getElementById('syncBtn');
       btn.disabled = true;
@@ -1388,7 +1613,7 @@
         const res = await fetch('/api/sync-prices', { method: 'POST' });
         const data = await res.json();
         await loadVaultData();
-        alert(`Sync Complete! Updated ${data.updatedCount || 0} One Piece cards.`);
+        alert(`Sync Complete! Updated ${data.updatedCount || 0} One Piece cards & images.`);
       } catch (e) {
         alert('Sync error: ' + e.message);
       } finally {
