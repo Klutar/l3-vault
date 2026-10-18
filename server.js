@@ -1,101 +1,23 @@
 const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
-const { DatabaseSync } = require('node:sqlite');
 
 const PORT = process.env.PORT || 10000;
-const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'l3_vault.db');
-
-let db;
-let isSyncing = false;
+const SUPABASE_URL = (process.env.SUPABASE_URL || 'https://hlasbjayeptkuylnrnoq.supabase.co').replace(/\/rest\/v1\/?$/, '').replace(/\/$/, '');
+const SUPABASE_KEY = process.env.SUPABASE_KEY || 'sb_publishable_2WLqzVsb2ZpIaO96jg9yQA_oIw2R0jW';
 
 const OP_COLORS = ['Red', 'Green', 'Blue', 'Purple', 'Black', 'Yellow'];
 
-// Reliably extract all One Piece colors regardless of separator (/, ;, comma, or space)
 function extractColors(colorStr) {
   if (!colorStr) return [];
   const lower = String(colorStr).toLowerCase();
   return OP_COLORS.filter(c => lower.includes(c.toLowerCase()));
 }
 
-function initDatabase() {
-  console.log('Initializing SQLite database at:', DB_PATH);
-  db = new DatabaseSync(DB_PATH);
-
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS meta (
-      key TEXT PRIMARY KEY,
-      value TEXT
-    );
-
-    CREATE TABLE IF NOT EXISTS cards (
-      card_id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      set_code TEXT,
-      set_name TEXT,
-      rarity TEXT,
-      color TEXT,
-      card_type TEXT,
-      cost INTEGER,
-      power INTEGER,
-      counter INTEGER,
-      attribute TEXT,
-      subtypes TEXT,
-      effect TEXT,
-      image_url TEXT,
-      market_price REAL DEFAULT 0.0
-    );
-
-    CREATE TABLE IF NOT EXISTS locations (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      owner TEXT NOT NULL,
-      name TEXT NOT NULL,
-      UNIQUE(owner, name)
-    );
-
-    CREATE TABLE IF NOT EXISTS collection_copies (
-      copy_id INTEGER PRIMARY KEY AUTOINCREMENT,
-      owner TEXT NOT NULL,
-      card_id TEXT NOT NULL,
-      condition TEXT DEFAULT 'NM',
-      location TEXT DEFAULT 'Unassigned',
-      notes TEXT DEFAULT '',
-      FOREIGN KEY (card_id) REFERENCES cards(card_id)
-    );
-
-    CREATE TABLE IF NOT EXISTS decks (
-      deck_id INTEGER PRIMARY KEY AUTOINCREMENT,
-      owner TEXT DEFAULT 'Larry''s Collection',
-      deck_name TEXT NOT NULL,
-      leader_card_id TEXT,
-      notes TEXT
-    );
-
-    CREATE TABLE IF NOT EXISTS deck_cards (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      deck_id INTEGER NOT NULL,
-      card_id TEXT NOT NULL,
-      quantity INTEGER DEFAULT 1,
-      FOREIGN KEY (deck_id) REFERENCES decks(deck_id) ON DELETE CASCADE,
-      FOREIGN KEY (card_id) REFERENCES cards(card_id)
-    );
-  `);
-
-  try {
-    db.exec(`ALTER TABLE decks ADD COLUMN owner TEXT DEFAULT 'Larry''s Collection'`);
-  } catch (e) {}
-
-  // Ensure 'Unassigned' always exists as the base fallback for each collection
-  const defaultOwners = ["Larry's Collection", "Graham's Collection"];
-  const insertLoc = db.prepare(`INSERT OR IGNORE INTO locations (owner, name) VALUES (?, 'Unassigned')`);
-  for (const owner of defaultOwners) {
-    insertLoc.run(owner);
-  }
-
-  console.log('Database tables verified.');
+function getBaseCardId(cardId) {
+  const match = String(cardId || '').match(/^([A-Z]{1,4}\d{0,2}-\d{3})/i);
+  return match ? match[1].toUpperCase() : String(cardId || '').split(' ')[0].trim();
 }
-
-const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 function getExt(extendedData, ...keys) {
   if (!Array.isArray(extendedData)) return null;
@@ -112,40 +34,42 @@ function getExt(extendedData, ...keys) {
   return null;
 }
 
-function getBaseCardId(cardId) {
-  const match = String(cardId || '').match(/^([A-Z]{1,4}\d{0,2}-\d{3})/i);
-  return match ? match[1].toUpperCase() : String(cardId || '').split(' ')[0].trim();
+// Helper for Supabase PostgREST API calls
+async function sbFetch(endpoint, options = {}) {
+  const url = `${SUPABASE_URL}/rest/v1/${endpoint}`;
+  const headers = {
+    'apikey': SUPABASE_KEY,
+    'Content-Type': 'application/json',
+    ...(options.headers || {})
+  };
+  const res = await fetch(url, { ...options, headers });
+  const text = await res.text();
+  if (!res.ok) {
+    throw new Error(`Supabase error (${res.status}): ${text}`);
+  }
+  return text ? JSON.parse(text) : null;
 }
 
-function resolveCheapestPrintId(rawCardId) {
-  const baseId = getBaseCardId(rawCardId);
-  const candidates = db.prepare(`
-    SELECT card_id, name, market_price
-    FROM cards
-    WHERE card_id = ? OR card_id LIKE ?
-    ORDER BY
-      CASE WHEN card_id = ? THEN 0 ELSE 1 END ASC,
-      CASE WHEN market_price > 0 THEN market_price ELSE 999999 END ASC
-  `).all(baseId, `${baseId}%`, baseId);
-
-  if (!candidates || candidates.length === 0) return baseId;
-
-  const regularCandidates = candidates.filter(
-    c => !/\((Parallel|Alternate Art|Manga|Box Topper|SP|TR|Foil)\)/i.test(c.card_id) &&
-         !/\((Parallel|Alternate Art|Manga|Box Topper|SP|TR)\)/i.test(c.name || '')
-  );
-
-  if (regularCandidates.length > 0) {
-    regularCandidates.sort((a, b) => (a.market_price || 9999) - (b.market_price || 9999));
-    return regularCandidates[0].card_id;
+// Fetch all rows from a table (handles Supabase's 1,000-row pagination limit automatically)
+async function sbFetchAll(table, queryParams = 'select=*') {
+  const allRows = [];
+  let offset = 0;
+  const limit = 1000;
+  while (true) {
+    const sep = queryParams ? '&' : '';
+    const batch = await sbFetch(`${table}?${queryParams}${sep}limit=${limit}&offset=${offset}`);
+    if (!Array.isArray(batch) || batch.length === 0) break;
+    allRows.push(...batch);
+    if (batch.length < limit) break;
+    offset += limit;
   }
-  return candidates[0].card_id;
+  return allRows;
 }
 
 async function fetchJson(url) {
   const res = await fetch(url, {
     headers: {
-      'User-Agent': 'L3Vault/4.0.0 (One Piece TCG Collection Database)',
+      'User-Agent': 'L3Vault/5.0.0 (One Piece TCG Supabase Cloud)',
       'Accept': 'application/json'
     }
   });
@@ -153,110 +77,79 @@ async function fetchJson(url) {
   return res.json();
 }
 
-async function syncAllPricesAndCards() {
-  if (isSyncing) return { updatedCount: 0, lastSync: 'Sync already in progress...' };
-  isSyncing = true;
-  console.log('Starting TCGplayer / TCGcsv catalog & price sync...');
+// Sync a single One Piece Set (Group) from TCGcsv into Supabase
+async function syncSingleGroupToSupabase(group) {
+  const productsData = await fetchJson(`https://tcgcsv.com/tcgplayer/68/${group.groupId}/products`);
+  const pricesData = await fetchJson(`https://tcgcsv.com/tcgplayer/68/${group.groupId}/prices`);
 
-  try {
-    const groupsData = await fetchJson(`https://tcgcsv.com/tcgplayer/68/groups`);
-    const targetGroups = (groupsData.results || []).filter(
-      g => !g.name.includes('(JP)') && !g.name.includes('Pre-Release')
-    );
-
-    const upsertCard = db.prepare(`
-      INSERT INTO cards (
-        card_id, name, set_code, set_name, rarity, color, card_type,
-        cost, power, counter, attribute, subtypes, effect, image_url, market_price
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(card_id) DO UPDATE SET
-        name = excluded.name,
-        set_code = excluded.set_code,
-        set_name = excluded.set_name,
-        rarity = COALESCE(excluded.rarity, cards.rarity),
-        color = COALESCE(excluded.color, cards.color),
-        card_type = COALESCE(excluded.card_type, cards.card_type),
-        cost = COALESCE(excluded.cost, cards.cost),
-        power = COALESCE(excluded.power, cards.power),
-        counter = COALESCE(excluded.counter, cards.counter),
-        attribute = COALESCE(excluded.attribute, cards.attribute),
-        subtypes = COALESCE(excluded.subtypes, cards.subtypes),
-        effect = COALESCE(excluded.effect, cards.effect),
-        market_price = excluded.market_price,
-        image_url = COALESCE(excluded.image_url, cards.image_url)
-    `);
-
-    let updatedCount = 0;
-    for (const group of targetGroups) {
-      try {
-        await sleep(75);
-        const productsData = await fetchJson(`https://tcgcsv.com/tcgplayer/68/${group.groupId}/products`);
-        await sleep(75);
-        const pricesData = await fetchJson(`https://tcgcsv.com/tcgplayer/68/${group.groupId}/prices`);
-
-        const priceMap = new Map();
-        for (const p of pricesData.results || []) {
-          if (p.marketPrice && (!priceMap.has(p.productId) || p.subTypeName === 'Normal')) {
-            priceMap.set(p.productId, p.marketPrice);
-          }
-        }
-
-        const seenIdsInSet = new Set();
-        db.exec('BEGIN TRANSACTION');
-
-        for (const prod of productsData.results || []) {
-          const ext = prod.extendedData || [];
-          const rawNumber = getExt(ext, 'Number', 'Card Number');
-          const rarity = getExt(ext, 'Rarity');
-          if (!rawNumber) continue;
-
-          let cardId = rawNumber.trim().toUpperCase();
-          const variantMatch = prod.name.match(/\((Parallel|Alternate Art|Manga|Box Topper|SP|TR|Foil)\)/i);
-          if (variantMatch) cardId = `${cardId} (${variantMatch[1]})`;
-          if (seenIdsInSet.has(cardId)) cardId = `${rawNumber.trim().toUpperCase()}-${prod.productId}`;
-          seenIdsInSet.add(cardId);
-
-          const baseId = getBaseCardId(cardId);
-          const setCode = baseId.includes('-') ? baseId.split('-')[0] : (group.abbreviation || group.name);
-          const rawColor = getExt(ext, 'Color') || 'Unknown';
-          const parsedColors = extractColors(rawColor);
-          const normalizedColor = parsedColors.length > 0 ? parsedColors.join('/') : rawColor;
-
-          const cardType = getExt(ext, 'CardType', 'Card Type') || 'Card';
-          const costVal = parseInt(getExt(ext, 'Cost', 'Life'), 10);
-          const powerVal = parseInt(getExt(ext, 'Power'), 10);
-          const counterVal = parseInt(getExt(ext, 'Counter', 'Counter+'), 10);
-          const attribute = getExt(ext, 'Attribute');
-          const subtypes = getExt(ext, 'Subtypes', 'Type');
-          const effect = getExt(ext, 'Description', 'Effect');
-          const fallbackImg = `https://en.onepiece-cardgame.com/images/cardlist/card/${baseId}.png`;
-          const imageUrl = prod.imageUrl || fallbackImg;
-          const marketPrice = priceMap.get(prod.productId) || 0.0;
-
-          upsertCard.run(
-            cardId, prod.name, setCode, group.name, rarity, normalizedColor, cardType,
-            Number.isNaN(costVal) ? null : costVal,
-            Number.isNaN(powerVal) ? null : powerVal,
-            Number.isNaN(counterVal) ? null : counterVal,
-            attribute, subtypes, effect, imageUrl, marketPrice
-          );
-          updatedCount++;
-        }
-        db.exec('COMMIT');
-      } catch (err) {
-        try { db.exec('ROLLBACK'); } catch (e) {}
-      }
+  const priceMap = new Map();
+  for (const p of pricesData.results || []) {
+    if (p.marketPrice && (!priceMap.has(p.productId) || p.subTypeName === 'Normal')) {
+      priceMap.set(p.productId, p.marketPrice);
     }
-
-    const now = new Date().toLocaleString('en-US', { timeZone: 'America/New_York' });
-    db.prepare(`INSERT OR REPLACE INTO meta (key, value) VALUES ('last_sync', ?)`).run(now);
-    return { updatedCount, lastSync: now };
-  } finally {
-    isSyncing = false;
   }
+
+  const cardRowsMap = new Map();
+  for (const prod of productsData.results || []) {
+    const ext = prod.extendedData || [];
+    const rawNumber = getExt(ext, 'Number', 'Card Number');
+    const rarity = getExt(ext, 'Rarity');
+    if (!rawNumber) continue;
+
+    let cardId = rawNumber.trim().toUpperCase();
+    const variantMatch = prod.name.match(/\((Parallel\vert{}Alternate Art\vert{}Manga\vert{}Box Topper\vert{}SP\vert{}TR\vert{}Foil)\)/i);
+    if (variantMatch) cardId = `${cardId} (${variantMatch[1]})`;
+    if (cardRowsMap.has(cardId)) cardId = `${rawNumber.trim().toUpperCase()}-${prod.productId}`;
+
+    const baseId = getBaseCardId(cardId);
+    const setCode = baseId.includes('-') ? baseId.split('-')[0] : (group.abbreviation || group.name);
+    const rawColor = getExt(ext, 'Color') || 'Unknown';
+    const parsedColors = extractColors(rawColor);
+    const normalizedColor = parsedColors.length > 0 ? parsedColors.join('/') : rawColor;
+
+    const cardType = getExt(ext, 'CardType', 'Card Type') || 'Card';
+    const costVal = parseInt(getExt(ext, 'Cost', 'Life'), 10);
+    const powerVal = parseInt(getExt(ext, 'Power'), 10);
+    const counterVal = parseInt(getExt(ext, 'Counter', 'Counter+'), 10);
+    const attribute = getExt(ext, 'Attribute');
+    const subtypes = getExt(ext, 'Subtypes', 'Type');
+    const effect = getExt(ext, 'Description', 'Effect');
+    const fallbackImg = `https://en.onepiece-cardgame.com/images/cardlist/card/${baseId}.png`;
+    const imageUrl = prod.imageUrl || fallbackImg;
+    const marketPrice = priceMap.get(prod.productId) || 0.0;
+
+    cardRowsMap.set(cardId, {
+      card_id: cardId,
+      name: prod.name,
+      set_code: setCode,
+      set_name: group.name,
+      rarity: rarity || null,
+      color: normalizedColor,
+      card_type: cardType,
+      cost: Number.isNaN(costVal) ? null : costVal,
+      power: Number.isNaN(powerVal) ? null : powerVal,
+      counter: Number.isNaN(counterVal) ? null : counterVal,
+      attribute: attribute || null,
+      subtypes: subtypes || null,
+      effect: effect || null,
+      image_url: imageUrl,
+      market_price: marketPrice
+    });
+  }
+
+  const rows = Array.from(cardRowsMap.values());
+  if (rows.length > 0) {
+    await sbFetch(`cards?on_conflict=card_id`, {
+      method: 'POST',
+      headers: { 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify(rows)
+    });
+  }
+  return rows.length;
 }
 
 function readJsonBody(req) {
+  if (req.body && typeof req.body === 'object') return Promise.resolve(req.body);
   return new Promise((resolve, reject) => {
     let body = '';
     req.on('data', chunk => { body += chunk.toString(); });
@@ -276,28 +169,28 @@ function sendJson(res, status, data) {
   res.end(JSON.stringify(data));
 }
 
-const server = http.createServer(async (req, res) => {
+async function requestHandler(req, res) {
   const urlObj = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const pathname = urlObj.pathname;
 
   try {
+    // Serve Frontend UI
     if (req.method === 'GET' && pathname === '/') {
       const htmlPath = path.join(__dirname, 'index.html');
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
       return res.end(fs.readFileSync(htmlPath, 'utf8'));
     }
 
-    // Get All Cards + Owner Collection + Custom Locations
+    // 1. Get All Cards + Active Owner Collection + Custom Locations
     if (req.method === 'GET' && pathname === '/api/cards') {
       const owner = urlObj.searchParams.get('owner') || "Larry's Collection";
 
-      const cards = db.prepare(`SELECT * FROM cards ORDER BY card_id ASC`).all();
-      const copies = db.prepare(`
-        SELECT copy_id, card_id, condition, location, notes
-        FROM collection_copies
-        WHERE owner = ?
-        ORDER BY copy_id ASC
-      `).all(owner);
+      const [cards, copies, locRows, metaRows] = await Promise.all([
+        sbFetchAll('cards', 'select=*&order=card_id.asc'),
+        sbFetchAll('collection_copies', `owner=eq.${encodeURIComponent(owner)}&select=*&order=copy_id.asc`),
+        sbFetch(`locations?owner=eq.${encodeURIComponent(owner)}&select=name&order=name.asc`),
+        sbFetch(`meta?key=eq.last_sync&select=value`)
+      ]);
 
       const copiesByCard = new Map();
       for (const c of copies) {
@@ -309,55 +202,53 @@ const server = http.createServer(async (req, res) => {
         const cardCopies = copiesByCard.get(card.card_id) || [];
         return {
           ...card,
+          market_price: Number(card.market_price || 0),
           owned_qty: cardCopies.length,
           copies: cardCopies
         };
       });
 
-      const rawLocations = db.prepare(`SELECT name FROM locations WHERE owner = ? ORDER BY CASE WHEN name = 'Unassigned' THEN 0 ELSE 1 END, name ASC`).all(owner).map(r => r.name);
-      const syncRow = db.prepare(`SELECT value FROM meta WHERE key = 'last_sync'`).get();
+      const rawLocs = (locRows || []).map(r => r.name);
+      const sortedLocs = ['Unassigned', ...rawLocs.filter(n => n !== 'Unassigned')];
+      const lastSync = (metaRows && metaRows[0]) ? metaRows[0].value : 'Ready';
 
       return sendJson(res, 200, {
         cards: enrichedCards,
-        locations: rawLocations.length ? rawLocations : ['Unassigned'],
-        lastSync: syncRow ? syncRow.value : (isSyncing ? 'Syncing catalog in background...' : 'Ready'),
-        isSyncing
+        locations: sortedLocs,
+        lastSync
       });
     }
 
-    // Quick + / - Adjust Copy Count
+    // 2. Quick + / - Adjust Copy Count
     if (req.method === 'POST' && pathname === '/api/collection/adjust') {
       const { owner = "Larry's Collection", card_id, delta = 1, location = 'Unassigned', condition = 'NM' } = await readJsonBody(req);
 
       if (delta > 0) {
-        const insert = db.prepare(`
-          INSERT INTO collection_copies (owner, card_id, condition, location, notes)
-          VALUES (?, ?, ?, ?, '')
-        `);
+        const rowsToInsert = [];
         for (let i = 0; i < delta; i++) {
-          insert.run(owner, card_id, condition, location);
+          rowsToInsert.push({ owner, card_id, condition, location, notes: '' });
         }
+        await sbFetch(`collection_copies`, {
+          method: 'POST',
+          headers: { 'Prefer': 'return=minimal' },
+          body: JSON.stringify(rowsToInsert)
+        });
       } else if (delta < 0) {
         const toRemove = Math.abs(delta);
-        const existing = db.prepare(`
-          SELECT copy_id FROM collection_copies
-          WHERE owner = ? AND card_id = ?
-          ORDER BY CASE WHEN location = 'Unassigned' THEN 0 ELSE 1 END, copy_id DESC
-          LIMIT ?
-        `).all(owner, card_id, toRemove);
-
-        const del = db.prepare(`DELETE FROM collection_copies WHERE copy_id = ?`);
-        for (const row of existing) {
-          del.run(row.copy_id);
+        const existing = await sbFetch(
+          `collection_copies?owner=eq.${encodeURIComponent(owner)}&card_id=eq.${encodeURIComponent(card_id)}&select=copy_id,location&order=copy_id.desc`
+        );
+        // Prefer removing 'Unassigned' copies first
+        existing.sort((a, b) => (a.location === 'Unassigned' ? -1 : 1) - (b.location === 'Unassigned' ? -1 : 1));
+        const idsToDelete = existing.slice(0, toRemove).map(r => r.copy_id);
+        if (idsToDelete.length > 0) {
+          await sbFetch(`collection_copies?copy_id=in.(${idsToDelete.join(',')})`, { method: 'DELETE' });
         }
       }
 
-      const updatedCopies = db.prepare(`
-        SELECT copy_id, card_id, condition, location, notes
-        FROM collection_copies
-        WHERE owner = ? AND card_id = ?
-        ORDER BY copy_id ASC
-      `).all(owner, card_id);
+      const updatedCopies = await sbFetch(
+        `collection_copies?owner=eq.${encodeURIComponent(owner)}&card_id=eq.${encodeURIComponent(card_id)}&select=*&order=copy_id.asc`
+      );
 
       return sendJson(res, 200, {
         success: true,
@@ -367,96 +258,113 @@ const server = http.createServer(async (req, res) => {
       });
     }
 
-    // Update a Specific Copy's Location, Condition, or Notes
+    // 3. Update a Specific Copy's Location, Condition, or Notes
     if (req.method === 'PUT' && pathname === '/api/collection/copy') {
       const { copy_id, location, condition, notes } = await readJsonBody(req);
-      db.prepare(`
-        UPDATE collection_copies
-        SET location = ?, condition = ?, notes = ?
-        WHERE copy_id = ?
-      `).run(location || 'Unassigned', condition || 'NM', notes || '', copy_id);
+      const updated = await sbFetch(`collection_copies?copy_id=eq.${copy_id}`, {
+        method: 'PATCH',
+        headers: { 'Prefer': 'return=representation' },
+        body: JSON.stringify({
+          location: location || 'Unassigned',
+          condition: condition || 'NM',
+          notes: notes || ''
+        })
+      });
 
-      const copyRow = db.prepare(`SELECT owner, card_id FROM collection_copies WHERE copy_id = ?`).get(copy_id);
       let updatedCopies = [];
-      if (copyRow) {
-        updatedCopies = db.prepare(`
-          SELECT copy_id, card_id, condition, location, notes
-          FROM collection_copies
-          WHERE owner = ? AND card_id = ?
-          ORDER BY copy_id ASC
-        `).all(copyRow.owner, copyRow.card_id);
+      if (updated && updated[0]) {
+        const { owner, card_id } = updated[0];
+        updatedCopies = await sbFetch(
+          `collection_copies?owner=eq.${encodeURIComponent(owner)}&card_id=eq.${encodeURIComponent(card_id)}&select=*&order=copy_id.asc`
+        );
       }
 
       return sendJson(res, 200, { success: true, copies: updatedCopies });
     }
 
-    // Delete a Specific Copy
+    // 4. Delete a Specific Copy
     if (req.method === 'DELETE' && pathname === '/api/collection/copy') {
       const { copy_id } = await readJsonBody(req);
-      const copyRow = db.prepare(`SELECT owner, card_id FROM collection_copies WHERE copy_id = ?`).get(copy_id);
-      db.prepare(`DELETE FROM collection_copies WHERE copy_id = ?`).run(copy_id);
+      const existing = await sbFetch(`collection_copies?copy_id=eq.${copy_id}&select=owner,card_id`);
+      await sbFetch(`collection_copies?copy_id=eq.${copy_id}`, { method: 'DELETE' });
 
       let updatedCopies = [];
-      if (copyRow) {
-        updatedCopies = db.prepare(`
-          SELECT copy_id, card_id, condition, location, notes
-          FROM collection_copies
-          WHERE owner = ? AND card_id = ?
-          ORDER BY copy_id ASC
-        `).all(copyRow.owner, copyRow.card_id);
+      let cardId = null;
+      if (existing && existing[0]) {
+        cardId = existing[0].card_id;
+        updatedCopies = await sbFetch(
+          `collection_copies?owner=eq.${encodeURIComponent(existing[0].owner)}&card_id=eq.${encodeURIComponent(cardId)}&select=*&order=copy_id.asc`
+        );
       }
 
       return sendJson(res, 200, {
         success: true,
-        card_id: copyRow ? copyRow.card_id : null,
+        card_id: cardId,
         owned_qty: updatedCopies.length,
         copies: updatedCopies
       });
     }
 
-    // Add a New User-Created Location
+    // 5. Add a Custom User Location
     if (req.method === 'POST' && pathname === '/api/locations') {
       const { owner = "Larry's Collection", name } = await readJsonBody(req);
       const cleanName = (name || '').trim();
       if (!cleanName) return sendJson(res, 400, { error: 'Location name required' });
 
-      db.prepare(`INSERT OR IGNORE INTO locations (owner, name) VALUES (?, ?)`).run(owner, cleanName);
-      const locations = db.prepare(`SELECT name FROM locations WHERE owner = ? ORDER BY CASE WHEN name = 'Unassigned' THEN 0 ELSE 1 END, name ASC`).all(owner).map(r => r.name);
-      return sendJson(res, 200, { success: true, locations });
+      await sbFetch(`locations?on_conflict=owner,name`, {
+        method: 'POST',
+        headers: { 'Prefer': 'resolution=ignore-duplicates,return=minimal' },
+        body: JSON.stringify([{ owner, name: cleanName }])
+      });
+
+      const locRows = await sbFetch(`locations?owner=eq.${encodeURIComponent(owner)}&select=name&order=name.asc`);
+      const rawLocs = (locRows || []).map(r => r.name);
+      return sendJson(res, 200, {
+        success: true,
+        locations: ['Unassigned', ...rawLocs.filter(n => n !== 'Unassigned')]
+      });
     }
 
-    // Delete a User-Created Location
+    // 6. Delete a Custom User Location
     if (req.method === 'DELETE' && pathname === '/api/locations') {
       const { owner = "Larry's Collection", name } = await readJsonBody(req);
       if (name && name !== 'Unassigned') {
-        db.prepare(`DELETE FROM locations WHERE owner = ? AND name = ?`).run(owner, name);
-        db.prepare(`UPDATE collection_copies SET location = 'Unassigned' WHERE owner = ? AND location = ?`).run(owner, name);
+        await sbFetch(`locations?owner=eq.${encodeURIComponent(owner)}&name=eq.${encodeURIComponent(name)}`, {
+          method: 'DELETE'
+        });
+        await sbFetch(`collection_copies?owner=eq.${encodeURIComponent(owner)}&location=eq.${encodeURIComponent(name)}`, {
+          method: 'PATCH',
+          headers: { 'Prefer': 'return=minimal' },
+          body: JSON.stringify({ location: 'Unassigned' })
+        });
       }
-      const locations = db.prepare(`SELECT name FROM locations WHERE owner = ? ORDER BY CASE WHEN name = 'Unassigned' THEN 0 ELSE 1 END, name ASC`).all(owner).map(r => r.name);
-      return sendJson(res, 200, { success: true, locations });
+
+      const locRows = await sbFetch(`locations?owner=eq.${encodeURIComponent(owner)}&select=name&order=name.asc`);
+      const rawLocs = (locRows || []).map(r => r.name);
+      return sendJson(res, 200, {
+        success: true,
+        locations: ['Unassigned', ...rawLocs.filter(n => n !== 'Unassigned')]
+      });
     }
 
-    // Get Saved Decks for Active Owner
+    // 7. Get Saved Decks for Active Owner
     if (req.method === 'GET' && pathname === '/api/decks') {
       const owner = urlObj.searchParams.get('owner') || "Larry's Collection";
-      const decks = db.prepare(`SELECT * FROM decks WHERE owner = ? ORDER BY deck_name ASC`).all(owner);
+      const decks = await sbFetch(`decks?owner=eq.${encodeURIComponent(owner)}&select=*&order=deck_name.asc`);
+      if (!decks || decks.length === 0) return sendJson(res, 200, []);
 
-      const decksWithCards = decks.map(deck => {
-        const deckCards = db.prepare(`
-          SELECT dc.*, c.name, c.set_code, c.rarity, c.color, c.card_type, c.cost, c.power, c.counter, c.market_price, c.image_url
-          FROM deck_cards dc
-          LEFT JOIN cards c ON dc.card_id = c.card_id
-          WHERE dc.deck_id = ?
-          ORDER BY c.card_type DESC, c.cost ASC, dc.card_id ASC
-        `).all(deck.deck_id);
+      const deckIds = decks.map(d => d.deck_id).join(',');
+      const allDeckCards = await sbFetch(`deck_cards?deck_id=in.(${deckIds})&select=*`);
 
-        return { ...deck, cards: deckCards };
-      });
+      const decksWithCards = decks.map(d => ({
+        ...d,
+        cards: (allDeckCards || []).filter(dc => Number(dc.deck_id) === Number(d.deck_id))
+      }));
 
       return sendJson(res, 200, decksWithCards);
     }
 
-    // Save or Update a Deck
+    // 8. Save or Update a Deck
     if (req.method === 'POST' && pathname === '/api/decks/save') {
       const { deck_id, owner = "Larry's Collection", deck_name, leader_card_id, notes, cards = [] } = await readJsonBody(req);
       if (!deck_name || !deck_name.trim()) {
@@ -464,140 +372,92 @@ const server = http.createServer(async (req, res) => {
       }
 
       let targetDeckId = deck_id;
-      db.exec('BEGIN TRANSACTION');
-      try {
-        if (targetDeckId) {
-          db.prepare(`UPDATE decks SET deck_name = ?, leader_card_id = ?, notes = ?, owner = ? WHERE deck_id = ?`)
-            .run(deck_name.trim(), leader_card_id || '', notes || '', owner, targetDeckId);
-          db.prepare(`DELETE FROM deck_cards WHERE deck_id = ?`).run(targetDeckId);
-        } else {
-          const info = db.prepare(`INSERT INTO decks (owner, deck_name, leader_card_id, notes) VALUES (?, ?, ?, ?)`)
-            .run(owner, deck_name.trim(), leader_card_id || '', notes || '');
-          targetDeckId = Number(info.lastInsertRowid);
-        }
-
-        const insertCard = db.prepare(`INSERT INTO deck_cards (deck_id, card_id, quantity) VALUES (?, ?, ?)`);
-        for (const item of cards) {
-          if (item.card_id && item.quantity > 0) {
-            const cheapestId = resolveCheapestPrintId(item.card_id);
-            insertCard.run(targetDeckId, cheapestId, Math.min(4, Math.max(1, Number(item.quantity))));
-          }
-        }
-        db.exec('COMMIT');
-        return sendJson(res, 200, { success: true, deck_id: targetDeckId });
-      } catch (err) {
-        try { db.exec('ROLLBACK'); } catch (e) {}
-        return sendJson(res, 500, { success: false, error: err.message });
+      if (targetDeckId) {
+        await sbFetch(`decks?deck_id=eq.${targetDeckId}`, {
+          method: 'PATCH',
+          headers: { 'Prefer': 'return=minimal' },
+          body: JSON.stringify({
+            owner,
+            deck_name: deck_name.trim(),
+            leader_card_id: leader_card_id || '',
+            notes: notes || ''
+          })
+        });
+        await sbFetch(`deck_cards?deck_id=eq.${targetDeckId}`, { method: 'DELETE' });
+      } else {
+        const created = await sbFetch(`decks`, {
+          method: 'POST',
+          headers: { 'Prefer': 'return=representation' },
+          body: JSON.stringify([{
+            owner,
+            deck_name: deck_name.trim(),
+            leader_card_id: leader_card_id || '',
+            notes: notes || ''
+          }])
+        });
+        targetDeckId = created[0].deck_id;
       }
+
+      const validCards = cards
+        .filter(item => item.card_id && item.quantity > 0)
+        .map(item => ({
+          deck_id: targetDeckId,
+          card_id: item.card_id,
+          quantity: Math.min(4, Math.max(1, Number(item.quantity)))
+        }));
+
+      if (validCards.length > 0) {
+        await sbFetch(`deck_cards`, {
+          method: 'POST',
+          headers: { 'Prefer': 'return=minimal' },
+          body: JSON.stringify(validCards)
+        });
+      }
+
+      return sendJson(res, 200, { success: true, deck_id: targetDeckId });
     }
 
-    // Delete a Deck
+    // 9. Delete a Deck
     if (req.method === 'DELETE' && pathname === '/api/decks') {
       const { deck_id } = await readJsonBody(req);
-      db.prepare(`DELETE FROM deck_cards WHERE deck_id = ?`).run(deck_id);
-      db.prepare(`DELETE FROM decks WHERE deck_id = ?`).run(deck_id);
+      await sbFetch(`deck_cards?deck_id=eq.${deck_id}`, { method: 'DELETE' });
+      await sbFetch(`decks?deck_id=eq.${deck_id}`, { method: 'DELETE' });
       return sendJson(res, 200, { success: true });
     }
 
-    // Auto-Build 50-Card Synergy Deck (Supports Multi-Color Leaders & Owned Cards Priority)
-    if (req.method === 'POST' && pathname === '/api/decks/meta-suggest') {
-      const { leader_card_id, owner = "Larry's Collection" } = await readJsonBody(req);
-      const baseLeaderId = getBaseCardId(leader_card_id);
-      const leader = db.prepare(`SELECT * FROM cards WHERE card_id = ? OR card_id LIKE ? LIMIT 1`).get(leader_card_id, `${baseLeaderId}%`);
-      const leaderName = leader ? leader.name : 'Custom Leader';
-      const leaderColors = leader && leader.color ? extractColors(leader.color) : ['Red'];
-      const primarySubtype = leader && leader.subtypes ? leader.subtypes.split('/')[0].trim() : '';
-
-      // Check which cards the user already owns so we can favor owned cards
-      const ownedRows = db.prepare(`SELECT card_id, COUNT(*) as cnt FROM collection_copies WHERE owner = ? GROUP BY card_id`).all(owner);
-      const ownedByBase = new Map();
-      for (const r of ownedRows) {
-        const bId = getBaseCardId(r.card_id);
-        ownedByBase.set(bId, (ownedByBase.get(bId) || 0) + Number(r.cnt));
-      }
-
-      const rawPool = db.prepare(`
-        SELECT * FROM cards
-        WHERE card_type IN ('Character', 'Event', 'Stage')
-        ORDER BY CASE WHEN market_price > 0 THEN market_price ELSE 999999 END ASC
-      `).all();
-
-      const cheapestByBaseId = new Map();
-      for (const c of rawPool) {
-        if (!c.color) continue;
-        if (/\((Parallel|Alternate Art|Manga|Box Topper|SP|TR|Foil)\)/i.test(c.card_id) ||
-            /\((Parallel|Alternate Art|Manga|Box Topper|SP|TR)\)/i.test(c.name || '')) {
-          continue;
-        }
-        const cardColors = extractColors(c.color);
-        if (cardColors.length === 0 || !cardColors.some(cc => leaderColors.includes(cc))) continue;
-
-        const bId = getBaseCardId(c.card_id);
-        if (!cheapestByBaseId.has(bId)) {
-          cheapestByBaseId.set(bId, c);
-        } else {
-          const current = cheapestByBaseId.get(bId);
-          const pNew = c.market_price > 0 ? c.market_price : 9999;
-          const pCur = current.market_price > 0 ? current.market_price : 9999;
-          if (pNew < pCur) cheapestByBaseId.set(bId, c);
-        }
-      }
-
-      // Sort pool so cards owned in the active Vault are prioritized first, then cheapest regular print
-      const allPool = Array.from(cheapestByBaseId.values()).sort((a, b) => {
-        const ownA = ownedByBase.get(getBaseCardId(a.card_id)) || 0;
-        const ownB = ownedByBase.get(getBaseCardId(b.card_id)) || 0;
-        if (ownA > 0 && ownB === 0) return -1;
-        if (ownB > 0 && ownA === 0) return 1;
-        const pa = a.market_price > 0 ? a.market_price : 9999;
-        const pb = b.market_price > 0 ? b.market_price : 9999;
-        return pa - pb;
-      });
-
-      const picked = [];
-      let totalCards = 0;
-
-      const addGroup = (filterFn, targetCopies, qtyPerCard = 4) => {
-        let added = 0;
-        for (const card of allPool) {
-          if (totalCards >= 50 || added >= targetCopies) break;
-          if (picked.some(p => p.card_id === card.card_id)) continue;
-          if (filterFn(card)) {
-            const qty = Math.min(qtyPerCard, 50 - totalCards, targetCopies - added);
-            if (qty > 0) {
-              picked.push({ card_id: card.card_id, quantity: qty });
-              totalCards += qty;
-              added += qty;
-            }
-          }
-        }
-      };
-
-      addGroup(c => c.counter === 2000 && (primarySubtype ? (c.subtypes || '').includes(primarySubtype) : true), 8, 4);
-      addGroup(c => c.counter === 2000, 4, 4);
-      addGroup(c => c.card_type === 'Character' && c.cost >= 1 && c.cost <= 3 && (primarySubtype ? (c.subtypes || '').includes(primarySubtype) : true), 12, 4);
-      addGroup(c => c.card_type === 'Character' && c.cost >= 4 && c.cost <= 5, 12, 4);
-      addGroup(c => c.card_type === 'Character' && c.cost >= 6, 8, 4);
-      addGroup(c => c.card_type === 'Event' || c.card_type === 'Stage', 6, 3);
-      addGroup(() => true, 50 - totalCards, 4);
-
-      return sendJson(res, 200, {
-        deck_name: `${leaderName} (${leaderColors.join('/')}) Synergy Deck`,
-        leader_card_id: leader ? leader.card_id : leader_card_id,
-        notes: `Built for ${leaderName} (${leaderColors.join('/')}): prioritizes your owned Vault cards & cheapest regular prints.`,
-        cards: picked
-      });
+    // 10. Serverless-Safe Set-by-Set Sync Endpoints (Never times out on Vercel)
+    if (req.method === 'GET' && pathname === '/api/sync-groups') {
+      const groupsData = await fetchJson(`https://tcgcsv.com/tcgplayer/68/groups`);
+      const targetGroups = (groupsData.results || []).filter(
+        g => !g.name.includes('(JP)') && !g.name.includes('Pre-Release')
+      );
+      return sendJson(res, 200, { groups: targetGroups });
     }
 
-    // Full Vault Backup
-    if (req.method === 'GET' && pathname === '/api/backup') {
-      const locations = db.prepare(`SELECT * FROM locations`).all();
-      const copies = db.prepare(`SELECT * FROM collection_copies`).all();
-      const decks = db.prepare(`SELECT * FROM decks`).all();
-      const deckCards = db.prepare(`SELECT * FROM deck_cards`).all();
+    if (req.method === 'POST' && pathname === '/api/sync-set') {
+      const { group, isLast } = await readJsonBody(req);
+      const count = await syncSingleGroupToSupabase(group);
+      if (isLast) {
+        const now = new Date().toLocaleString('en-US', { timeZone: 'America/New_York' });
+        await sbFetch(`meta?on_conflict=key`, {
+          method: 'POST',
+          headers: { 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+          body: JSON.stringify([{ key: 'last_sync', value: now }])
+        });
+      }
+      return sendJson(res, 200, { success: true, updatedCount: count });
+    }
 
+    // 11. Full Vault Backup & Restore
+    if (req.method === 'GET' && pathname === '/api/backup') {
+      const [locations, copies, decks, deckCards] = await Promise.all([
+        sbFetchAll('locations', 'select=*'),
+        sbFetchAll('collection_copies', 'select=*'),
+        sbFetchAll('decks', 'select=*'),
+        sbFetchAll('deck_cards', 'select=*')
+      ]);
       return sendJson(res, 200, {
-        version: 4,
+        version: 5,
         exportedAt: new Date().toISOString(),
         locations,
         copies,
@@ -606,52 +466,34 @@ const server = http.createServer(async (req, res) => {
       });
     }
 
-    // Restore Vault Backup
     if (req.method === 'POST' && pathname === '/api/restore') {
       const data = await readJsonBody(req);
-      db.exec('BEGIN TRANSACTION');
-      try {
-        if (Array.isArray(data.locations)) {
-          db.exec(`DELETE FROM locations`);
-          const insLoc = db.prepare(`INSERT OR IGNORE INTO locations (owner, name) VALUES (?, ?)`);
-          for (const l of data.locations) insLoc.run(l.owner, l.name);
-        }
-        if (Array.isArray(data.copies)) {
-          db.exec(`DELETE FROM collection_copies`);
-          const insCopy = db.prepare(`
-            INSERT INTO collection_copies (owner, card_id, condition, location, notes)
-            VALUES (?, ?, ?, ?, ?)
-          `);
-          for (const c of data.copies) {
-            insCopy.run(c.owner || "Larry's Collection", c.card_id, c.condition || 'NM', c.location || 'Unassigned', c.notes || '');
-          }
-        }
-        if (Array.isArray(data.decks)) {
-          db.exec(`DELETE FROM deck_cards`);
-          db.exec(`DELETE FROM decks`);
-          const insDeck = db.prepare(`INSERT INTO decks (deck_id, owner, deck_name, leader_card_id, notes) VALUES (?, ?, ?, ?, ?)`);
-          for (const d of data.decks) {
-            insDeck.run(d.deck_id, d.owner || "Larry's Collection", d.deck_name, d.leader_card_id || '', d.notes || '');
-          }
-        }
-        if (Array.isArray(data.deckCards)) {
-          const insDc = db.prepare(`INSERT INTO deck_cards (deck_id, card_id, quantity) VALUES (?, ?, ?)`);
-          for (const dc of data.deckCards) {
-            insDc.run(dc.deck_id, dc.card_id, dc.quantity || 1);
-          }
-        }
-        db.exec('COMMIT');
-        return sendJson(res, 200, { success: true });
-      } catch (err) {
-        try { db.exec('ROLLBACK'); } catch (e) {}
-        return sendJson(res, 500, { success: false, error: err.message });
+      if (Array.isArray(data.locations) && data.locations.length > 0) {
+        const cleanLocs = data.locations.map(l => ({ owner: l.owner, name: l.name }));
+        await sbFetch(`locations?on_conflict=owner,name`, {
+          method: 'POST',
+          headers: { 'Prefer': 'resolution=ignore-duplicates,return=minimal' },
+          body: JSON.stringify(cleanLocs)
+        });
       }
-    }
-
-    // Sync Prices & New Card Releases
-    if (req.method === 'POST' && pathname === '/api/sync-prices') {
-      const result = await syncAllPricesAndCards();
-      return sendJson(res, 200, { success: true, ...result });
+      if (Array.isArray(data.copies)) {
+        await sbFetch(`collection_copies?copy_id=gt.0`, { method: 'DELETE' });
+        if (data.copies.length > 0) {
+          const cleanCopies = data.copies.map(c => ({
+            owner: c.owner || "Larry's Collection",
+            card_id: c.card_id,
+            condition: c.condition || 'NM',
+            location: c.location || 'Unassigned',
+            notes: c.notes || ''
+          }));
+          await sbFetch(`collection_copies`, {
+            method: 'POST',
+            headers: { 'Prefer': 'return=minimal' },
+            body: JSON.stringify(cleanCopies)
+          });
+        }
+      }
+      return sendJson(res, 200, { success: true });
     }
 
     res.writeHead(404, { 'Content-Type': 'text/plain' });
@@ -660,23 +502,14 @@ const server = http.createServer(async (req, res) => {
     console.error('Server error:', err);
     sendJson(res, 500, { error: err.message });
   }
-});
+}
 
-initDatabase();
+// Export for Vercel Serverless Functions AND allow running locally via `node server.js`
+module.exports = requestHandler;
 
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`L3-Vault Server running at http://0.0.0.0:${PORT}`);
-
-  try {
-    const countRow = db.prepare(`SELECT COUNT(*) AS cnt FROM cards`).get();
-    if (!countRow || countRow.cnt === 0) {
-      console.log('Card catalog is empty on startup. Triggering automatic initial sync...');
-      syncAllPricesAndCards().catch(e => console.error('Initial auto-sync error:', e));
-    }
-    setInterval(() => {
-      syncAllPricesAndCards().catch(e => console.error('Scheduled 24h sync error:', e));
-    }, 24 * 60 * 60 * 1000);
-  } catch (e) {
-    console.error('Auto-sync check error:', e);
-  }
-});
+if (require.main === module) {
+  const server = http.createServer(requestHandler);
+  server.listen(PORT, '0.0.0.0', () => {
+    console.log(`L3-Vault (Supabase Cloud Edition) running at http://0.0.0.0:${PORT}`);
+  });
+}
